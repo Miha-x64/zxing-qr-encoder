@@ -659,7 +659,11 @@ public final class EncoderTestCase extends Assert {
     //   - To be precise, it needs 11727 + 4 (getMode info) + 14 (length info) =
     //     11745 bits = 1468.125 bytes are needed (i.e. cannot fit in 1468
     //     bytes).
-    Encoder.encode("0".repeat(3518), ErrorCorrectionLevel.L); // Mike-CHANGED StringBuilder to String.repeat
+    StringBuilder builder = new StringBuilder(3518);
+    for (int x = 0; x < 3518; x++) {
+      builder.append('0');
+    }
+    Encoder.encode(builder.toString(), ErrorCorrectionLevel.L);
   }
 
   @Test
