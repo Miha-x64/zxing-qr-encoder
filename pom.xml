@@ -14,69 +14,60 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  -->
+<!-- Mike-MOVED from core/pom.xml -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>com.google.zxing</groupId>
-  <artifactId>zxing-parent</artifactId>
+  <groupId>com.google.zxing</groupId> <!-- Mike-MOVED from original /pom.xml -->
+  <artifactId>core</artifactId>
   <version>3.4.2-SNAPSHOT</version>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
 
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>com.google.zxing</groupId>
-        <artifactId>core</artifactId>
-        <version>${zxing.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.zxing</groupId>
-        <artifactId>android-core</artifactId>
-        <version>${zxing.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.zxing</groupId>
-        <artifactId>android-integration</artifactId>
-        <version>${zxing.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.google.zxing</groupId>
-        <artifactId>javase</artifactId>
-        <version>${zxing.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.13.2</version>
-        <scope>test</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.13.2</version> <!-- Mike-MOVED from original /pom.xml -->
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 
-  <modules>
-    <module>core</module>
-    <!-- Mike-REMOVED: comments, modules: javase, zxingorg -->
-  </modules>
+  <!-- Mike-REMOVED <parent /> -->
 
-  <!-- Mike-REMOVED <properties /> -->
+  <name>ZXing Core</name>
+  <description>Core barcode encoding/decoding library</description>
+
+  <!-- Mike-REMOVED <profiles /> -->
+
   <build>
     <plugins>
-      <!-- Mike-REMOVED maven-javadoc-plugin -->
+      <!-- Mike-REMOVED bnd-maven-plugin -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+            <manifestEntries>
+              <Automatic-Module-Name>com.google.zxing</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
+
+    <!-- Mike-MOVED several declarations from original /pom.xml -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
       </plugin>
-      <!-- Mike-REMOVED maven-site-plugin -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-release-plugin</artifactId>
       </plugin>
-      <!-- Mike-REMOVED clirr-maven-plugin, apache-rat-plugin -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
       </plugin>
-      <!-- Mike-REMOVED maven-checkstyle-plugin -->
     </plugins>
     <pluginManagement>
       <plugins>
@@ -132,7 +123,6 @@
             </execution>
           </executions>
         </plugin>
-        <!-- Mike-REMOVED maven-javadoc-plugin -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
@@ -143,9 +133,6 @@
                 <directory>.</directory>
                 <includes>
                   <include>**/classes/**</include>
-                  <include>**/gwt-unitCache/**</include>
-                  <include>**/webapp/generator/**</include>
-                  <include>**/WEB-INF/deploy/**</include>
                 </includes>
               </fileset>
             </filesets>
@@ -257,114 +244,9 @@
             </systemPropertyVariables>
           </configuration>
         </plugin>
-        <!-- Mike-REMOVED
-          maven-war-plugin, android-maven-plugin, proguard-maven-plugin, maven-site-plugin, build-helper-maven-plugin,
-          maven-checkstyle-plugin, maven-checkstyle-plugin, apache-rat-plugin, clirr-maven-plugin, jacoco-maven-plugin
-        -->
       </plugins>
     </pluginManagement>
+    <!-- END Mike-MOVED -->
   </build>
-
-  <!-- Mike-REMOVED <reporting /> -->
-
-  <name>ZXing</name>
-  <description>Parent Maven project for ZXing modules</description>
-  <url>https://github.com/zxing/zxing</url>
-  <inceptionYear>2007</inceptionYear>
-  <licenses>
-    <license>
-      <name>The Apache Software License, Version 2.0</name>
-      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-  <developers>
-    <developer>
-      <id>zxing-authors</id>
-      <name>ZXing Authors</name>
-    </developer>
-  </developers>
-
-  <issueManagement>
-    <system>Github</system>
-    <url>https://github.com/zxing/zxing/issues</url>
-  </issueManagement>
-  <mailingLists>
-    <mailingList>
-      <name>zxing Google Group</name>
-      <archive>https://groups.google.com/forum/?fromgroups#!forum/zxing</archive>
-    </mailingList>
-    <mailingList>
-      <name>StackOverflow tag</name>
-      <archive>https://stackoverflow.com/questions/tagged/zxing</archive>
-    </mailingList>
-  </mailingLists>
-  <scm>
-    <connection>scm:git:https://github.com/zxing/zxing.git</connection>
-    <developerConnection>scm:git:https://github.com/zxing/zxing.git</developerConnection>
-    <url>https://github.com/zxing/zxing</url>
-    <tag>HEAD</tag>
-  </scm>
-
-  <distributionManagement>
-    <repository>
-      <id>sonatype-nexus-staging</id>
-      <name>Nexus Release Repository</name>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-    </repository>
-    <snapshotRepository>
-      <id>sonatype-nexus-snapshots</id>
-      <name>Sonatype Nexus Snapshots</name>
-      <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-    </snapshotRepository>
-    <site>
-      <id>zxing.website</id>
-      <name>ZXing documentation</name>
-      <url>file:docs/</url>
-    </site>
-  </distributionManagement>
-
-  <repositories>
-    <repository>
-      <id>google-maven-central</id>
-      <name>GCS Maven Central mirror</name>
-      <url>https://maven-central.storage-download.googleapis.com/maven2/</url>
-    </repository>
-  </repositories>
-  <pluginRepositories>
-    <pluginRepository>
-      <id>google-maven-central</id>
-      <name>GCS Maven Central mirror</name>
-      <url>https://maven-central.storage-download.googleapis.com/maven2/</url>
-    </pluginRepository>
-  </pluginRepositories>
-
-  <profiles>
-    <!-- Mike-REMOVED profile: build-android -->
-    <profile>
-      <id>release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>android-release</id>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-jarsigner-plugin</artifactId>
-          </plugin>
-          <!-- Mike-REMOVED android-maven-plugin -->
-        </plugins>
-      </build>
-    </profile>
-    <!-- Mike-REMOVED profiles: jacoco, travis, appspot, javadoc -->
-  </profiles>
 
 </project>
