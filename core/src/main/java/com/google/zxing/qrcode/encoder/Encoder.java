@@ -158,8 +158,7 @@ public final class Encoder {
       headerAndDataBits.appendBitArray(dataBits);
     }
 
-    Version.ECBlocks ecBlocks = version.getECBlocksForLevel(ecLevel);
-    int numDataBytes = version.getTotalCodewords() - ecBlocks.getTotalECCodewords();
+    int numDataBytes = version.getTotalCodewords() - version.getTotalECCodewordsForLevel(ecLevel);
 
     // Terminate the bits properly.
     terminateBits(numDataBytes, headerAndDataBits);
@@ -168,7 +167,7 @@ public final class Encoder {
     BitArray finalBits = interleaveWithECBytes(headerAndDataBits,
                                                version.getTotalCodewords(),
                                                numDataBytes,
-                                               ecBlocks.getNumBlocks());
+                                               version.getNumBlocksForLevel(ecLevel));
 
     // Mike-MOVED QRCode object creation from here
 
@@ -319,8 +318,7 @@ public final class Encoder {
     // numBytes = 196
     int numBytes = version.getTotalCodewords();
     // getNumECBytes = 130
-    Version.ECBlocks ecBlocks = version.getECBlocksForLevel(ecLevel);
-    int numEcBytes = ecBlocks.getTotalECCodewords();
+    int numEcBytes = version.getTotalECCodewordsForLevel(ecLevel);
     // getNumDataBytes = 196 - 130 = 66
     int numDataBytes = numBytes - numEcBytes;
     int totalInputBytes = (numInputBits + 7) / 8;
