@@ -41,7 +41,7 @@ public final class ReedSolomonEncoder {
       GenericGFPoly lastGenerator = cachedGenerators.get(cachedGenerators.size() - 1);
       for (int d = cachedGenerators.size(); d <= degree; d++) {
         GenericGFPoly nextGenerator = lastGenerator.multiply(
-            new GenericGFPoly(field, new int[] { 1, field.exp(d - 1 + field.getGeneratorBase()) }));
+            new GenericGFPoly(field, new int[] { 1, field.expTable[d - 1 + field.generatorBase]}));
         cachedGenerators.add(nextGenerator);
         lastGenerator = nextGenerator;
       }
@@ -62,8 +62,8 @@ public final class ReedSolomonEncoder {
     System.arraycopy(toEncode, 0, infoCoefficients, 0, dataBytes);
     GenericGFPoly info = new GenericGFPoly(field, infoCoefficients);
     info = info.multiplyByMonomial(ecBytes, 1);
-    GenericGFPoly remainder = info.divide(generator)[1];
-    int[] coefficients = remainder.getCoefficients();
+    GenericGFPoly remainder = info.remainder(generator);
+    int[] coefficients = remainder.coefficients;
     int numZeroCoefficients = ecBytes - coefficients.length;
     for (int i = 0; i < numZeroCoefficients; i++) {
       toEncode[dataBytes + i] = 0;

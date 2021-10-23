@@ -55,9 +55,7 @@ public final class ByteMatrix {
     return bytes;
   }
 
-  public void set(int x, int y, byte value) {
-    bytes[y][x] = value;
-  }
+  // Mike-REMOVED set(int, int, byte)
 
   public void set(int x, int y, int value) {
     bytes[y][x] = (byte) value;

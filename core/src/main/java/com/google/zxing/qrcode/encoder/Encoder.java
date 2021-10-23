@@ -19,7 +19,6 @@ package com.google.zxing.qrcode.encoder;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
-import com.google.zxing.common.StringUtils;
 import com.google.zxing.common.CharacterSetECI;
 import com.google.zxing.common.reedsolomon.GenericGF;
 import com.google.zxing.common.reedsolomon.ReedSolomonEncoder;
@@ -38,6 +37,9 @@ import java.util.Map;
  * @author dswitkin@google.com (Daniel Switkin) - ported from C++
  */
 public final class Encoder {
+
+  // Mike-MOVED from StringUtils
+  static final Charset SHIFT_JIS_CHARSET = Charset.forName("SJIS");
 
   // The original table is defined in the table 5 of JISX0510:2004 (p.19).
   private static final int[] ALPHANUMERIC_TABLE = {
@@ -98,7 +100,7 @@ public final class Encoder {
       mode = Mode.BYTE;
 
       Charset priorityEncoding = encoding.equals(DEFAULT_BYTE_MODE_ENCODING) ? null : encoding;
-      MinimalEncoder.ResultList rn = MinimalEncoder.encode(content, null, priorityEncoding, hasGS1FormatHint, ecLevel);
+      MinimalEncoder.ResultList rn = MinimalEncoder.encode(content, priorityEncoding, hasGS1FormatHint, ecLevel);
 
       headerAndDataBits = new BitArray();
       rn.getBits(headerAndDataBits);
@@ -168,11 +170,7 @@ public final class Encoder {
                                                numDataBytes,
                                                ecBlocks.getNumBlocks());
 
-    QRCode qrCode = new QRCode();
-
-    qrCode.setECLevel(ecLevel);
-    qrCode.setMode(mode);
-    qrCode.setVersion(version);
+    // Mike-MOVED QRCode object creation from here
 
     //  Choose the mask pattern and set to "qrCode".
     int dimension = version.getDimensionForVersion();
@@ -188,13 +186,12 @@ public final class Encoder {
     if (maskPattern == -1) {
       maskPattern = chooseMaskPattern(finalBits, ecLevel, version, matrix);
     }
-    qrCode.setMaskPattern(maskPattern);
 
     // Build the matrix and set it to "qrCode".
     MatrixUtil.buildMatrix(finalBits, ecLevel, version, maskPattern, matrix);
-    qrCode.setMatrix(matrix);
 
-    return qrCode;
+    // Mike-MOVED QRCode object creation here
+    return new QRCode(mode, ecLevel, version, maskPattern, matrix);
   }
 
   /**
@@ -244,7 +241,7 @@ public final class Encoder {
    * if it is Shift_JIS, and the input is only double-byte Kanji, then we return {@link Mode#KANJI}.
    */
   private static Mode chooseMode(String content, Charset encoding) {
-    if (StringUtils.SHIFT_JIS_CHARSET.equals(encoding) && isOnlyDoubleByteKanji(content)) {
+    if (SHIFT_JIS_CHARSET.equals(encoding) && isOnlyDoubleByteKanji(content)) {
       // Choose Kanji mode if all input are double-byte characters
       return Mode.KANJI;
     }
@@ -270,7 +267,7 @@ public final class Encoder {
   }
 
   static boolean isOnlyDoubleByteKanji(String content) {
-    byte[] bytes = content.getBytes(StringUtils.SHIFT_JIS_CHARSET);
+    byte[] bytes = content.getBytes(SHIFT_JIS_CHARSET);
     int length = bytes.length;
     if (length % 2 != 0) {
       return false;
@@ -467,7 +464,7 @@ public final class Encoder {
     // First, place data blocks.
     for (int i = 0; i < maxNumDataBytes; ++i) {
       for (BlockPair block : blocks) {
-        byte[] dataBytes = block.getDataBytes();
+        byte[] dataBytes = block.dataBytes;
         if (i < dataBytes.length) {
           result.appendBits(dataBytes[i], 8);
         }
@@ -476,7 +473,7 @@ public final class Encoder {
     // Then, place error correction blocks.
     for (int i = 0; i < maxNumEcBytes; ++i) {
       for (BlockPair block : blocks) {
-        byte[] ecBytes = block.getErrorCorrectionBytes();
+        byte[] ecBytes = block.errorCorrectionBytes;
         if (i < ecBytes.length) {
           result.appendBits(ecBytes[i], 8);
         }
@@ -605,7 +602,7 @@ public final class Encoder {
   }
 
   static void appendKanjiBytes(String content, BitArray bits) throws WriterException {
-    byte[] bytes = content.getBytes(StringUtils.SHIFT_JIS_CHARSET);
+    byte[] bytes = content.getBytes(SHIFT_JIS_CHARSET);
     if (bytes.length % 2 != 0) {
       throw new WriterException("Kanji byte size not even");
     }
@@ -632,6 +629,19 @@ public final class Encoder {
     bits.appendBits(Mode.ECI.getBits(), 4);
     // This is correct for values up to 127, which is all we need now.
     bits.appendBits(eci.getValue(), 8);
+  }
+
+  // Mike-MOVED here from separate file
+  private static final class BlockPair {
+
+    final byte[] dataBytes;
+    final byte[] errorCorrectionBytes;
+
+    BlockPair(byte[] data, byte[] errorCorrection) {
+      dataBytes = data;
+      errorCorrectionBytes = errorCorrection;
+    }
+
   }
 
 }

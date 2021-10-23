@@ -19,7 +19,6 @@ package com.google.zxing.qrcode.encoder;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
-import com.google.zxing.common.StringUtils;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Mode;
 import com.google.zxing.qrcode.decoder.Version;
@@ -661,11 +660,7 @@ public final class EncoderTestCase extends Assert {
     //   - To be precise, it needs 11727 + 4 (getMode info) + 14 (length info) =
     //     11745 bits = 1468.125 bytes are needed (i.e. cannot fit in 1468
     //     bytes).
-    StringBuilder builder = new StringBuilder(3518);
-    for (int x = 0; x < 3518; x++) {
-      builder.append('0');
-    }
-    Encoder.encode(builder.toString(), ErrorCorrectionLevel.L);
+    Encoder.encode("0".repeat(3518), ErrorCorrectionLevel.L); // Mike-CHANGED StringBuilder to String.repeat
   }
 
   @Test
@@ -907,7 +902,7 @@ public final class EncoderTestCase extends Assert {
 
   static void verifyMinimalEncoding(String input, String expectedResult, Charset priorityCharset, boolean isGS1) 
       throws Exception {
-    MinimalEncoder.ResultList result = MinimalEncoder.encode(input, null, priorityCharset, isGS1,
+    MinimalEncoder.ResultList result = MinimalEncoder.encode(input, priorityCharset, isGS1,
         ErrorCorrectionLevel.L);
     assertEquals(result.toString(), expectedResult);
   }
@@ -981,7 +976,7 @@ public final class EncoderTestCase extends Assert {
   }
 
   private static String shiftJISString(byte[] bytes) {
-    return new String(bytes, StringUtils.SHIFT_JIS_CHARSET);
+    return new String(bytes, Encoder.SHIFT_JIS_CHARSET);
   }
 
 }

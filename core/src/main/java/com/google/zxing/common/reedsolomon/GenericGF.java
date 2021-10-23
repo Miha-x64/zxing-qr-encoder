@@ -29,22 +29,15 @@ package com.google.zxing.common.reedsolomon;
  */
 public final class GenericGF {
 
-  public static final GenericGF AZTEC_DATA_12 = new GenericGF(0x1069, 4096, 1); // x^12 + x^6 + x^5 + x^3 + 1
-  public static final GenericGF AZTEC_DATA_10 = new GenericGF(0x409, 1024, 1); // x^10 + x^3 + 1
-  public static final GenericGF AZTEC_DATA_6 = new GenericGF(0x43, 64, 1); // x^6 + x + 1
-  public static final GenericGF AZTEC_PARAM = new GenericGF(0x13, 16, 1); // x^4 + x + 1
+  // Mike-REMOVED Aztec, DataMatrix, MaxiCode GFs
   public static final GenericGF QR_CODE_FIELD_256 = new GenericGF(0x011D, 256, 0); // x^8 + x^4 + x^3 + x^2 + 1
-  public static final GenericGF DATA_MATRIX_FIELD_256 = new GenericGF(0x012D, 256, 1); // x^8 + x^5 + x^3 + x^2 + 1
-  public static final GenericGF AZTEC_DATA_8 = DATA_MATRIX_FIELD_256;
-  public static final GenericGF MAXICODE_FIELD_64 = AZTEC_DATA_6;
 
-  private final int[] expTable;
+  // Mike-CHANGED: unprivated expTable, zero, size, generatorBase; removed one and primitive
+  final int[] expTable;
   private final int[] logTable;
-  private final GenericGFPoly zero;
-  private final GenericGFPoly one;
-  private final int size;
-  private final int primitive;
-  private final int generatorBase;
+  final GenericGFPoly zero;
+  final int size;
+  final int generatorBase;
 
   /**
    * Create a representation of GF(size) using the given primitive polynomial.
@@ -58,7 +51,6 @@ public final class GenericGF {
    *  In most cases it should be 1, but for QR code it is 0.
    */
   public GenericGF(int primitive, int size, int b) {
-    this.primitive = primitive;
     this.size = size;
     this.generatorBase = b;
 
@@ -78,31 +70,9 @@ public final class GenericGF {
     }
     // logTable[0] == 0 but this should never be used
     zero = new GenericGFPoly(this, new int[]{0});
-    one = new GenericGFPoly(this, new int[]{1});
   }
 
-  GenericGFPoly getZero() {
-    return zero;
-  }
-
-  GenericGFPoly getOne() {
-    return one;
-  }
-
-  /**
-   * @return the monomial representing coefficient * x^degree
-   */
-  GenericGFPoly buildMonomial(int degree, int coefficient) {
-    if (degree < 0) {
-      throw new IllegalArgumentException();
-    }
-    if (coefficient == 0) {
-      return zero;
-    }
-    int[] coefficients = new int[degree + 1];
-    coefficients[0] = coefficient;
-    return new GenericGFPoly(this, coefficients);
-  }
+  // Mike-REMOVED getZero, getOne, buildMonomial
 
   /**
    * Implements both addition and subtraction -- they are the same in GF(size).
@@ -113,22 +83,7 @@ public final class GenericGF {
     return a ^ b;
   }
 
-  /**
-   * @return 2 to the power of a in GF(size)
-   */
-  int exp(int a) {
-    return expTable[a];
-  }
-
-  /**
-   * @return base 2 log of a in GF(size)
-   */
-  int log(int a) {
-    if (a == 0) {
-      throw new IllegalArgumentException();
-    }
-    return logTable[a];
-  }
+  // Mike-REMOVED exp, log
 
   /**
    * @return multiplicative inverse of a
@@ -150,17 +105,6 @@ public final class GenericGF {
     return expTable[(logTable[a] + logTable[b]) % (size - 1)];
   }
 
-  public int getSize() {
-    return size;
-  }
-
-  public int getGeneratorBase() {
-    return generatorBase;
-  }
-
-  @Override
-  public String toString() {
-    return "GF(0x" + Integer.toHexString(primitive) + ',' + size + ')';
-  }
+  // Mike-REMOVED getSize, getGeneratorBase, toString
 
 }

@@ -61,10 +61,7 @@
   <!-- Mike-REMOVED <properties /> -->
   <build>
     <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-      </plugin>
+      <!-- Mike-REMOVED maven-javadoc-plugin -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
@@ -135,27 +132,7 @@
             </execution>
           </executions>
         </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-javadoc-plugin</artifactId>
-          <version>3.3.1</version>
-          <configuration>
-            <source>${java.version}</source>
-            <quiet>true</quiet>
-            <notimestamp>true</notimestamp>
-            <encoding>${project.build.sourceEncoding}</encoding>
-            <docencoding>${project.reporting.outputEncoding}</docencoding>
-            <doclint>all</doclint>
-          </configuration>
-          <executions>
-            <execution>
-              <id>attach-javadocs</id>
-              <goals>
-                <goal>jar</goal>
-              </goals>
-            </execution>
-          </executions>
-        </plugin>
+        <!-- Mike-REMOVED maven-javadoc-plugin -->
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-clean-plugin</artifactId>
@@ -288,83 +265,7 @@
     </pluginManagement>
   </build>
 
-  <reporting>
-    <plugins>
-      <!-- Mike-REMOVED maven-project-info-reports-plugin -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <inherited>false</inherited>
-        <reportSets>
-          <reportSet>
-            <id>aggregate</id>
-            <inherited>false</inherited>
-            <reports>
-              <report>aggregate</report>
-            </reports>
-            <configuration>
-              <excludePackageNames>com.google.zxing.client.android*,com.google.zxing.client.glass*,com.google.zxing.web.generator*</excludePackageNames>
-              <groups>
-                <group>
-                  <title>Common support code</title>
-                  <packages>com.google.zxing:com.google.zxing.common*:com.google.zxing.client.result*</packages>
-                </group>
-                <group>
-                  <title>One-dimensional barcode (UPC, EAN, etc) support</title>
-                  <packages>com.google.zxing.oned</packages>
-                </group>
-                <group>
-                  <title>QR Code support</title>
-                  <packages>com.google.zxing.qrcode*</packages>
-                </group>
-                <group>
-                  <title>Data Matrix support</title>
-                  <packages>com.google.zxing.datamatrix*</packages>
-                </group>
-                <group>
-                  <title>PDF417 barcode support</title>
-                  <packages>com.google.zxing.pdf417*</packages>
-                </group>
-                <group>
-                  <title>Aztec barcode support</title>
-                  <packages>com.google.zxing.aztec*</packages>
-                </group>
-                <group>
-                  <title>MaxiCode support</title>
-                  <packages>com.google.zxing.maxicode*</packages>
-                </group>
-                <group>
-                  <title>RSS barcode support</title>
-                  <packages>com.google.zxing.oned.rss*</packages>
-                </group>
-                <group>
-                  <title>Multiple barcode scanning support</title>
-                  <packages>com.google.zxing.multi*</packages>
-                </group>
-                <group>
-                  <title>Web-based decoder app</title>
-                  <packages>com.google.zxing.web</packages>
-                </group>
-                <group>
-                  <title>Web-based App Engine encoder app</title>
-                  <packages>com.google.zxing.web.generator*</packages>
-                </group>
-                <group>
-                  <title>JavaSE utilities and support</title>
-                  <packages>com.google.zxing.client.j2se*</packages>
-                </group>
-                <group>
-                  <title>Android Intent integration</title>
-                  <packages>com.google.zxing.integration.android*</packages>
-                </group>
-              </groups>
-            </configuration>
-          </reportSet>
-        </reportSets>
-      </plugin>
-    </plugins>
-    <excludeDefaults>true</excludeDefaults>
-  </reporting>
+  <!-- Mike-REMOVED <reporting /> -->
 
   <name>ZXing</name>
   <description>Parent Maven project for ZXing modules</description>
@@ -463,27 +364,7 @@
         </plugins>
       </build>
     </profile>
-    <!-- Mike-REMOVED profiles: jacoco, travis, appspot -->
-    <profile>
-      <id>javadoc-9</id>
-      <activation>
-        <jdk>[9,)</jdk>
-      </activation>
-      <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-javadoc-plugin</artifactId>
-              <configuration combine.children="append">
-                <!-- Choose HTML5 output over deprecated HTML 4.01 -->
-                <additionalOptions>-html5</additionalOptions>
-              </configuration>
-            </plugin>
-          </plugins>
-        </pluginManagement>
-      </build>
-    </profile>
+    <!-- Mike-REMOVED profiles: jacoco, travis, appspot, javadoc -->
   </profiles>
 
 </project>

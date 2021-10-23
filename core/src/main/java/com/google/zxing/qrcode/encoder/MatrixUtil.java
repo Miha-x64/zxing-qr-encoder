@@ -325,7 +325,7 @@ final class MatrixUtil {
     if (!QRCode.isValidMaskPattern(maskPattern)) {
       throw new WriterException("Invalid mask pattern");
     }
-    int typeInfo = (ecLevel.getBits() << 3) | maskPattern;
+    int typeInfo = (ecLevel.ordinal() << 3) | maskPattern;
     bits.appendBits(typeInfo, 5);
 
     int bchCode = calculateBCHCode(typeInfo, TYPE_INFO_POLY);

@@ -28,80 +28,38 @@ public final class QRCode {
 
   public static final int NUM_MASK_PATTERNS = 8;
 
-  private Mode mode;
-  private ErrorCorrectionLevel ecLevel;
-  private Version version;
-  private int maskPattern;
-  private ByteMatrix matrix;
+  // Mike-CHANGED: everything is public final
+  public final Mode mode;
+  public final ErrorCorrectionLevel ecLevel;
+  public final Version version;
+  public final int maskPattern;
+  public final ByteMatrix matrix;
 
-  public QRCode() {
-    maskPattern = -1;
+  // Mike-CHANGED no-arg constructor to all-args
+  public QRCode(Mode mode, ErrorCorrectionLevel ecLevel, Version version, int maskPattern, ByteMatrix matrix) {
+    if (mode == null || ecLevel == null || version == null || !isValidMaskPattern(maskPattern) || matrix == null)
+      throw new IllegalArgumentException();
+    this.mode = mode;
+    this.ecLevel = ecLevel;
+    this.version = version;
+    this.maskPattern = maskPattern;
+    this.matrix = matrix;
   }
 
-  /**
-   * @return the mode. Not relevant if {@link com.google.zxing.EncodeHintType#QR_COMPACT} is selected.
-   */
-  public Mode getMode() {
-    return mode;
-  }
-
-  public ErrorCorrectionLevel getECLevel() {
-    return ecLevel;
-  }
-
-  public Version getVersion() {
-    return version;
-  }
-
-  public int getMaskPattern() {
-    return maskPattern;
-  }
-
-  public ByteMatrix getMatrix() {
-    return matrix;
-  }
+  // Mike-REMOVED getters
 
   @Override
-  public String toString() {
-    StringBuilder result = new StringBuilder(200);
-    result.append("<<\n");
-    result.append(" mode: ");
-    result.append(mode);
-    result.append("\n ecLevel: ");
-    result.append(ecLevel);
-    result.append("\n version: ");
-    result.append(version);
-    result.append("\n maskPattern: ");
-    result.append(maskPattern);
-    if (matrix == null) {
-      result.append("\n matrix: null\n");
-    } else {
-      result.append("\n matrix:\n");
-      result.append(matrix);
-    }
-    result.append(">>\n");
-    return result.toString();
+  public String toString() { // Mike-CHANGED SB to concat
+    return "<<\n" +
+        " mode: " + mode +
+        "\n ecLevel: " + ecLevel +
+        "\n version: " + version +
+        "\n maskPattern: " + maskPattern +
+        "\n matrix:\n" + matrix +
+        ">>\n";
   }
 
-  public void setMode(Mode value) {
-    mode = value;
-  }
-
-  public void setECLevel(ErrorCorrectionLevel value) {
-    ecLevel = value;
-  }
-
-  public void setVersion(Version version) {
-    this.version = version;
-  }
-
-  public void setMaskPattern(int value) {
-    maskPattern = value;
-  }
-
-  public void setMatrix(ByteMatrix value) {
-    matrix = value;
-  }
+  // Mike-REMOVED setters
 
   // Check if "mask_pattern" is valid.
   public static boolean isValidMaskPattern(int maskPattern) {

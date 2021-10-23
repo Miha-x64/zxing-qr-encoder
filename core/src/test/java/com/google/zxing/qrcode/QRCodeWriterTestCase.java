@@ -16,9 +16,7 @@
 
 package com.google.zxing.qrcode;
 
-import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
-import com.google.zxing.Writer;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
@@ -73,22 +71,18 @@ public final class QRCodeWriterTestCase extends Assert {
     }
     return matrix;
   }
-
   @Test
   public void testQRCodeWriter() throws WriterException {
     // The QR should be multiplied up to fit, with extra padding if necessary
     int bigEnough = 256;
-    Writer writer = new QRCodeWriter();
-    BitMatrix matrix = writer.encode("http://www.google.com/", BarcodeFormat.QR_CODE, bigEnough,
-        bigEnough, null);
+    BitMatrix matrix = QRCodeWriter.encode("http://www.google.com/", bigEnough, bigEnough, null);
     assertNotNull(matrix);
     assertEquals(bigEnough, matrix.getWidth());
     assertEquals(bigEnough, matrix.getHeight());
 
     // The QR will not fit in this size, so the matrix should come back bigger
     int tooSmall = 20;
-    matrix = writer.encode("http://www.google.com/", BarcodeFormat.QR_CODE, tooSmall,
-        tooSmall, null);
+    matrix = QRCodeWriter.encode("http://www.google.com/", tooSmall, tooSmall, null);
     assertNotNull(matrix);
     assertTrue(tooSmall < matrix.getWidth());
     assertTrue(tooSmall < matrix.getHeight());
@@ -96,17 +90,15 @@ public final class QRCodeWriterTestCase extends Assert {
     // We should also be able to handle non-square requests by padding them
     int strangeWidth = 500;
     int strangeHeight = 100;
-    matrix = writer.encode("http://www.google.com/", BarcodeFormat.QR_CODE, strangeWidth,
-        strangeHeight, null);
+    matrix = QRCodeWriter.encode("http://www.google.com/", strangeWidth, strangeHeight, null);
     assertNotNull(matrix);
     assertEquals(strangeWidth, matrix.getWidth());
     assertEquals(strangeHeight, matrix.getHeight());
   }
 
-  private static void compareToGoldenFile(String contents,
-                                          ErrorCorrectionLevel ecLevel,
-                                          int resolution,
-                                          String fileName) throws WriterException, IOException {
+  private static void compareToGoldenFile(
+      String contents, ErrorCorrectionLevel ecLevel, int resolution, String fileName
+  ) throws WriterException, IOException {
 
     BufferedImage image = loadImage(fileName);
     assertNotNull(image);
@@ -115,9 +107,7 @@ public final class QRCodeWriterTestCase extends Assert {
 
     Map<EncodeHintType,Object> hints = new EnumMap<>(EncodeHintType.class);
     hints.put(EncodeHintType.ERROR_CORRECTION, ecLevel);
-    Writer writer = new QRCodeWriter();
-    BitMatrix generatedResult = writer.encode(contents, BarcodeFormat.QR_CODE, resolution,
-        resolution, hints);
+    BitMatrix generatedResult = QRCodeWriter.encode(contents, resolution, resolution, hints);
 
     assertEquals(resolution, generatedResult.getWidth());
     assertEquals(resolution, generatedResult.getHeight());

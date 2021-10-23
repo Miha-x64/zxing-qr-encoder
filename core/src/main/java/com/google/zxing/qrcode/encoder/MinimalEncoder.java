@@ -133,8 +133,7 @@ final class MinimalEncoder {
    * @param ecLevel The error correction level.
    * @see ResultList#getVersion
    */
-  MinimalEncoder(String stringToEncode, Charset priorityCharset, boolean isGS1,
-      ErrorCorrectionLevel ecLevel) throws WriterException {
+  MinimalEncoder(String stringToEncode, Charset priorityCharset, boolean isGS1, ErrorCorrectionLevel ecLevel) {
 
     this.stringToEncode = stringToEncode;
     this.isGS1 = isGS1;
@@ -197,8 +196,6 @@ final class MinimalEncoder {
    * Encodes the string minimally
    *
    * @param stringToEncode The string to encode
-   * @param version The preferred {@link Version}. A minimal version is computed (see
-   *   {@link ResultList#getVersion method} when the value of the argument is null
    * @param priorityCharset The preferred {@link Charset}. When the value of the argument is null, the algorithm
    *   chooses charsets that leads to a minimal representation. Otherwise the algorithm will use the priority
    *   charset to encode any character in the input that can be encoded by it if the charset is among the
@@ -209,40 +206,32 @@ final class MinimalEncoder {
    * @see ResultList#getBits
    * @see ResultList#getVersion
    * @see ResultList#getSize
-   */
-  static ResultList encode(String stringToEncode, Version version, Charset priorityCharset, boolean isGS1,
-      ErrorCorrectionLevel ecLevel) throws WriterException {
-    return new MinimalEncoder(stringToEncode, priorityCharset, isGS1, ecLevel).encode(version);
+   */ // Mike-REMOVED version
+  static ResultList encode(String stringToEncode, Charset priorityCharset, boolean isGS1,
+                           ErrorCorrectionLevel ecLevel) throws WriterException {
+    return new MinimalEncoder(stringToEncode, priorityCharset, isGS1, ecLevel).encode();
   }
 
-  ResultList encode(Version version) throws WriterException {
-    if (version == null) { // compute minimal encoding trying the three version sizes.
-      final Version[] versions = {getVersion(VersionSize.SMALL),
-                                  getVersion(VersionSize.MEDIUM),
-                                  getVersion(VersionSize.LARGE)};
-      ResultList[] results = {encodeSpecificVersion(versions[0]),
-                              encodeSpecificVersion(versions[1]),
-                              encodeSpecificVersion(versions[2])};
-      int smallestSize = Integer.MAX_VALUE;
-      int smallestResult = -1;
-      for (int i = 0; i < 3; i++) {
-        int size = results[i].getSize();
-        if (Encoder.willFit(size, versions[i], ecLevel) && size < smallestSize) {
-          smallestSize = size;
-          smallestResult = i;
-        }
+  // Mike-REMOVED version
+  ResultList encode() throws WriterException {
+    // compute minimal encoding trying the three version sizes.
+    final Version[] versions =
+        {getVersion(VersionSize.SMALL), getVersion(VersionSize.MEDIUM), getVersion(VersionSize.LARGE)};
+    ResultList[] results =
+        {encodeSpecificVersion(versions[0]), encodeSpecificVersion(versions[1]), encodeSpecificVersion(versions[2])};
+    int smallestSize = Integer.MAX_VALUE;
+    int smallestResult = -1;
+    for (int i = 0; i < 3; i++) {
+      int size = results[i].getSize();
+      if (Encoder.willFit(size, versions[i], ecLevel) && size < smallestSize) {
+        smallestSize = size;
+        smallestResult = i;
       }
-      if (smallestResult < 0) {
-        throw new WriterException("Data too big for any version");
-      }
-      return results[smallestResult];
-    } else { // compute minimal encoding for a given version
-      ResultList result = encodeSpecificVersion(version);
-      if (!Encoder.willFit(result.getSize(), getVersion(getVersionSize(result.getVersion())), ecLevel)) {
-        throw new WriterException("Data too big for version" + version);
-      }
-      return result;
     }
+    if (smallestResult < 0) {
+      throw new WriterException("Data too big for any version");
+    }
+    return results[smallestResult];
   }
 
   static VersionSize getVersionSize(Version version) {
