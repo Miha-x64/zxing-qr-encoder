@@ -80,7 +80,7 @@ public final class Encoder {
                               ErrorCorrectionLevel ecLevel,
                               Map<EncodeHintType,?> hints) throws WriterException {
 
-    Version version;
+    int version;
     BitArray headerAndDataBits;
     Mode mode;
 
@@ -104,7 +104,7 @@ public final class Encoder {
 
       headerAndDataBits = new BitArray();
       rn.getBits(headerAndDataBits);
-      version = rn.getVersion();
+      version = rn.version;
 
     } else {
     
@@ -139,8 +139,7 @@ public final class Encoder {
       appendBytes(content, mode, dataBits, encoding);
   
       if (hints != null && hints.containsKey(EncodeHintType.QR_VERSION)) {
-        int versionNumber = Integer.parseInt(hints.get(EncodeHintType.QR_VERSION).toString());
-        version = Version.getVersionForNumber(versionNumber);
+        version = Integer.parseInt(hints.get(EncodeHintType.QR_VERSION).toString());
         int bitsNeeded = calculateBitsNeeded(mode, headerBits, dataBits, version);
         if (!willFit(bitsNeeded, version, ecLevel)) {
           throw new WriterException("Data too big for requested version");
@@ -158,21 +157,20 @@ public final class Encoder {
       headerAndDataBits.appendBitArray(dataBits);
     }
 
-    int numDataBytes = version.getTotalCodewords() - version.getTotalECCodewordsForLevel(ecLevel);
+    int totalCodewords = Version.getTotalCodewordsFor(version);
+    int numDataBytes = totalCodewords - Version.getTotalECCodewordsFor(version, ecLevel);
 
     // Terminate the bits properly.
     terminateBits(numDataBytes, headerAndDataBits);
 
     // Interleave data bits with error correction code.
-    BitArray finalBits = interleaveWithECBytes(headerAndDataBits,
-                                               version.getTotalCodewords(),
-                                               numDataBytes,
-                                               version.getNumBlocksForLevel(ecLevel));
+    BitArray finalBits = interleaveWithECBytes(
+        headerAndDataBits, totalCodewords, numDataBytes, Version.getNumBlocksFor(version, ecLevel));
 
     // Mike-MOVED QRCode object creation from here
 
     //  Choose the mask pattern and set to "qrCode".
-    int dimension = version.getDimensionForVersion();
+    int dimension = Version.getDimensionFor(version);
     ByteMatrix matrix = new ByteMatrix(dimension, dimension);
 
     // Enable manual selection of the pattern to be used via hint
@@ -198,25 +196,22 @@ public final class Encoder {
    *
    * @throws WriterException if the data cannot fit in any version
    */
-  private static Version recommendVersion(ErrorCorrectionLevel ecLevel,
+  private static int recommendVersion(ErrorCorrectionLevel ecLevel,
                                           Mode mode,
                                           BitArray headerBits,
                                           BitArray dataBits) throws WriterException {
     // Hard part: need to know version to know how many bits length takes. But need to know how many
     // bits it takes to know version. First we take a guess at version by assuming version will be
     // the minimum, 1:
-    int provisionalBitsNeeded = calculateBitsNeeded(mode, headerBits, dataBits, Version.getVersionForNumber(1));
-    Version provisionalVersion = chooseVersion(provisionalBitsNeeded, ecLevel);
+    int provisionalBitsNeeded = calculateBitsNeeded(mode, headerBits, dataBits, 1);
+    int provisionalVersion = chooseVersion(provisionalBitsNeeded, ecLevel);
 
     // Use that guess to calculate the right version. I am still not sure this works in 100% of cases.
     int bitsNeeded = calculateBitsNeeded(mode, headerBits, dataBits, provisionalVersion);
     return chooseVersion(bitsNeeded, ecLevel);
   }
 
-  private static int calculateBitsNeeded(Mode mode,
-                                         BitArray headerBits,
-                                         BitArray dataBits,
-                                         Version version) {
+  private static int calculateBitsNeeded(Mode mode, BitArray headerBits, BitArray dataBits, int version) {
     return headerBits.getSize() + mode.getCharacterCountBits(version) + dataBits.getSize();
   }
 
@@ -282,7 +277,7 @@ public final class Encoder {
 
   private static int chooseMaskPattern(BitArray bits,
                                        ErrorCorrectionLevel ecLevel,
-                                       Version version,
+                                       int version,
                                        ByteMatrix matrix) throws WriterException {
 
     int minPenalty = Integer.MAX_VALUE;  // Lower penalty is better.
@@ -299,9 +294,8 @@ public final class Encoder {
     return bestMaskPattern;
   }
 
-  private static Version chooseVersion(int numInputBits, ErrorCorrectionLevel ecLevel) throws WriterException {
-    for (int versionNum = 1; versionNum <= 40; versionNum++) {
-      Version version = Version.getVersionForNumber(versionNum);
+  private static int chooseVersion(int numInputBits, ErrorCorrectionLevel ecLevel) throws WriterException {
+    for (int version = 1; version <= 40; version++) {
       if (willFit(numInputBits, version, ecLevel)) {
         return version;
       }
@@ -313,12 +307,12 @@ public final class Encoder {
    * @return true if the number of input bits will fit in a code with the specified version and
    * error correction level.
    */
-  static boolean willFit(int numInputBits, Version version, ErrorCorrectionLevel ecLevel) {
+  static boolean willFit(int numInputBits, int version, ErrorCorrectionLevel ecLevel) {
     // In the following comments, we use numbers of Version 7-H.
     // numBytes = 196
-    int numBytes = version.getTotalCodewords();
+    int numBytes = Version.getTotalCodewordsFor(version);
     // getNumECBytes = 130
-    int numEcBytes = version.getTotalECCodewordsForLevel(ecLevel);
+    int numEcBytes = Version.getTotalECCodewordsFor(version, ecLevel);
     // getNumDataBytes = 196 - 130 = 66
     int numDataBytes = numBytes - numEcBytes;
     int totalInputBytes = (numInputBits + 7) / 8;
@@ -511,7 +505,7 @@ public final class Encoder {
   /**
    * Append length info. On success, store the result in "bits".
    */
-  static void appendLengthInfo(int numLetters, Version version, Mode mode, BitArray bits) throws WriterException {
+  static void appendLengthInfo(int numLetters, int version, Mode mode, BitArray bits) throws WriterException {
     int numBits = mode.getCharacterCountBits(version);
     if (numLetters >= (1 << numBits)) {
       throw new WriterException(numLetters + " is bigger than " + ((1 << numBits) - 1));

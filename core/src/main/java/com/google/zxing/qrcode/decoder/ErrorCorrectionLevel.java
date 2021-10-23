@@ -32,7 +32,7 @@ public enum ErrorCorrectionLevel {
   /** H = ~30% correction */
   H,
   /** Q = ~25% correction */
-  Q;
+  Q,
 
   // Mike-REMOVED FOR_BITS, bits, ErrorCorrectionLevel(int), getBits, forBits
 

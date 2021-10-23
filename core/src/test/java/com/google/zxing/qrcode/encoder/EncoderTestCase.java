@@ -21,7 +21,6 @@ import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Mode;
-import com.google.zxing.qrcode.decoder.Version;
 
 import org.junit.Assert;
 import org.junit.Test;
@@ -331,25 +330,25 @@ public final class EncoderTestCase extends Assert {
   public void testAppendLengthInfo() throws WriterException {
     BitArray bits = new BitArray();
     Encoder.appendLengthInfo(1,  // 1 letter (1/1).
-                             Version.getVersionForNumber(1),
+                             1,
                              Mode.NUMERIC,
                              bits);
     assertEquals(" ........ .X", bits.toString());  // 10 bits.
     bits = new BitArray();
     Encoder.appendLengthInfo(2,  // 2 letters (2/1).
-                             Version.getVersionForNumber(10),
+                             10,
                              Mode.ALPHANUMERIC,
                              bits);
     assertEquals(" ........ .X.", bits.toString());  // 11 bits.
     bits = new BitArray();
     Encoder.appendLengthInfo(255,  // 255 letter (255/1).
-                             Version.getVersionForNumber(27),
+                             27,
                              Mode.BYTE,
                              bits);
     assertEquals(" ........ XXXXXXXX", bits.toString());  // 16 bits.
     bits = new BitArray();
     Encoder.appendLengthInfo(512,  // 512 letters (1024/2).
-                             Version.getVersionForNumber(40),
+                             40,
                              Mode.KANJI,
                              bits);
     assertEquals(" ..X..... ....", bits.toString());  // 12 bits.

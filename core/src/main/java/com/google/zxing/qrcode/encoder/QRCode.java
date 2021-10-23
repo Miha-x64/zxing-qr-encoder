@@ -18,7 +18,6 @@ package com.google.zxing.qrcode.encoder;
 
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Mode;
-import com.google.zxing.qrcode.decoder.Version;
 
 /**
  * @author satorux@google.com (Satoru Takabayashi) - creator
@@ -31,13 +30,13 @@ public final class QRCode {
   // Mike-CHANGED: everything is public final
   public final Mode mode;
   public final ErrorCorrectionLevel ecLevel;
-  public final Version version;
+  public final int version;
   public final int maskPattern;
   public final ByteMatrix matrix;
 
   // Mike-CHANGED no-arg constructor to all-args
-  public QRCode(Mode mode, ErrorCorrectionLevel ecLevel, Version version, int maskPattern, ByteMatrix matrix) {
-    if (mode == null || ecLevel == null || version == null || !isValidMaskPattern(maskPattern) || matrix == null)
+  public QRCode(Mode mode, ErrorCorrectionLevel ecLevel, int version, int maskPattern, ByteMatrix matrix) {
+    if (mode == null || ecLevel == null || version < 1 || version > 40 || !isValidMaskPattern(maskPattern) || matrix == null)
       throw new IllegalArgumentException();
     this.mode = mode;
     this.ecLevel = ecLevel;

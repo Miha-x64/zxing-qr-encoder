@@ -19,7 +19,6 @@ package com.google.zxing.qrcode.encoder;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import com.google.zxing.qrcode.decoder.Version;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -60,7 +59,7 @@ public final class MatrixUtilTestCase extends Assert {
     // Version 1.
     ByteMatrix matrix = new ByteMatrix(21, 21);
     MatrixUtil.clearMatrix(matrix);
-    MatrixUtil.embedBasicPatterns(Version.getVersionForNumber(1), matrix);
+    MatrixUtil.embedBasicPatterns(1, matrix);
     String expected =
         " 1 1 1 1 1 1 1 0           0 1 1 1 1 1 1 1\n" +
         " 1 0 0 0 0 0 1 0           0 1 0 0 0 0 0 1\n" +
@@ -92,7 +91,7 @@ public final class MatrixUtilTestCase extends Assert {
     // bottom corner.
     ByteMatrix matrix = new ByteMatrix(25, 25);
     MatrixUtil.clearMatrix(matrix);
-    MatrixUtil.embedBasicPatterns(Version.getVersionForNumber(2), matrix);
+    MatrixUtil.embedBasicPatterns(2, matrix);
     String expected =
         " 1 1 1 1 1 1 1 0                   0 1 1 1 1 1 1 1\n" +
         " 1 0 0 0 0 0 1 0                   0 1 0 0 0 0 0 1\n" +
@@ -160,7 +159,7 @@ public final class MatrixUtilTestCase extends Assert {
     // since 45x45 matrix is too big to depict.
     ByteMatrix matrix = new ByteMatrix(21, 21);
     MatrixUtil.clearMatrix(matrix);
-    MatrixUtil.maybeEmbedVersionInfo(Version.getVersionForNumber(7), matrix);
+    MatrixUtil.maybeEmbedVersionInfo(7, matrix);
     String expected =
         "                     0 0 1                \n" +
         "                     0 1 0                \n" +
@@ -191,7 +190,7 @@ public final class MatrixUtilTestCase extends Assert {
     // Cells other than basic patterns should be filled with zero.
     ByteMatrix matrix = new ByteMatrix(21, 21);
     MatrixUtil.clearMatrix(matrix);
-    MatrixUtil.embedBasicPatterns(Version.getVersionForNumber(1), matrix);
+    MatrixUtil.embedBasicPatterns(1, matrix);
     BitArray bits = new BitArray();
     MatrixUtil.embedDataBits(bits, -1, matrix);
     String expected =
@@ -232,7 +231,7 @@ public final class MatrixUtilTestCase extends Assert {
     ByteMatrix matrix = new ByteMatrix(21, 21);
     MatrixUtil.buildMatrix(bits,
                            ErrorCorrectionLevel.H,
-                           Version.getVersionForNumber(1),  // Version 1
+                           1,  // Version 1
                            3,  // Mask pattern 3
                            matrix);
     String expected =
@@ -295,7 +294,7 @@ public final class MatrixUtilTestCase extends Assert {
   public void testMakeVersionInfoBits() throws WriterException {
     // From Appendix D in JISX0510:2004 (p 68)
     BitArray bits = new BitArray();
-    MatrixUtil.makeVersionInfoBits(Version.getVersionForNumber(7), bits);
+    MatrixUtil.makeVersionInfoBits(7, bits);
     assertEquals(" ...XXXXX ..X..X.X ..", bits.toString());
   }
 

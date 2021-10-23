@@ -17,7 +17,6 @@
 package com.google.zxing.qrcode.encoder;
 
 import com.google.zxing.qrcode.decoder.Mode;
-import com.google.zxing.qrcode.decoder.Version;
 import com.google.zxing.common.BitArray;
 import com.google.zxing.common.CharacterSetECI;
 import com.google.zxing.WriterException;
@@ -213,17 +212,19 @@ final class MinimalEncoder {
   }
 
   // Mike-REMOVED version
+  private static final int[] TRY_VERSIONS = {9, 26, 40}; // Mike-MOVED
   ResultList encode() throws WriterException {
     // compute minimal encoding trying the three version sizes.
-    final Version[] versions =
-        {getVersion(VersionSize.SMALL), getVersion(VersionSize.MEDIUM), getVersion(VersionSize.LARGE)};
-    ResultList[] results =
-        {encodeSpecificVersion(versions[0]), encodeSpecificVersion(versions[1]), encodeSpecificVersion(versions[2])};
+    ResultList[] results = {
+        encodeSpecificVersion(TRY_VERSIONS[0]),
+        encodeSpecificVersion(TRY_VERSIONS[1]),
+        encodeSpecificVersion(TRY_VERSIONS[2])
+    };
     int smallestSize = Integer.MAX_VALUE;
     int smallestResult = -1;
     for (int i = 0; i < 3; i++) {
       int size = results[i].getSize();
-      if (Encoder.willFit(size, versions[i], ecLevel) && size < smallestSize) {
+      if (Encoder.willFit(size, TRY_VERSIONS[i], ecLevel) && size < smallestSize) {
         smallestSize = size;
         smallestResult = i;
       }
@@ -234,21 +235,8 @@ final class MinimalEncoder {
     return results[smallestResult];
   }
 
-  static VersionSize getVersionSize(Version version) {
-    return version.getVersionNumber() <= 9 ? VersionSize.SMALL : version.getVersionNumber() <= 26 ?
-      VersionSize.MEDIUM : VersionSize.LARGE;
-  }
-
-  static Version getVersion(VersionSize versionSize) {
-    switch (versionSize) {
-      case SMALL:
-        return Version.getVersionForNumber(9);
-      case MEDIUM:
-        return Version.getVersionForNumber(26);
-      case LARGE:
-      default:
-        return Version.getVersionForNumber(40);
-    }
+  static VersionSize getVersionSize(int version) {
+    return version <= 9 ? VersionSize.SMALL : version <= 26 ? VersionSize.MEDIUM : VersionSize.LARGE;
   }
 
   static boolean isNumeric(char c) {
@@ -301,7 +289,7 @@ final class MinimalEncoder {
     edges[vertexIndex][edge.charsetEncoderIndex][getCompactedOrdinal(edge.mode)].add(edge);
   }
 
-  void addEdges(Version version, List<Edge>[][][] edges, int from, Edge previous) {
+  void addEdges(int version, List<Edge>[][][] edges, int from, Edge previous) {
     int start = 0;
     int end = encoders.length;
     if (priorityEncoderIndex >= 0 && encoders[priorityEncoderIndex].canEncode(stringToEncode.charAt(from))) {
@@ -331,7 +319,7 @@ final class MinimalEncoder {
           !canEncode(Mode.NUMERIC, stringToEncode.charAt(from + 2)) ? 2 : 3, previous, version));
     }
   }
-  ResultList encodeSpecificVersion(Version version) throws WriterException {
+  ResultList encodeSpecificVersion(int version) throws WriterException {
 
     @SuppressWarnings("checkstyle:lineLength")
     /* A vertex represents a tuple of a position in the input, a mode and a character encoding where position 0
@@ -513,8 +501,7 @@ final class MinimalEncoder {
     private final Edge previous;
     private final int cachedTotalSize;
 
-    private Edge(Mode mode, int fromPosition, int charsetEncoderIndex, int characterLength, Edge previous,
-                 Version version) {
+    private Edge(Mode mode, int fromPosition, int charsetEncoderIndex, int characterLength, Edge previous, int version) {
       this.mode = mode;
       this.fromPosition = fromPosition;
       this.charsetEncoderIndex = mode == Mode.BYTE || previous == null ? charsetEncoderIndex :
@@ -556,9 +543,9 @@ final class MinimalEncoder {
   final class ResultList {
 
     private final List<ResultList.ResultNode> list = new ArrayList<>();
-    private final Version version;
+    final int version; // Mike-CHANGED visibility (and type, of course)
 
-    ResultList(Version version, Edge solution) {
+    ResultList(int version, Edge solution) {
       int length = 0;
       Edge current = solution;
       boolean containsECI = false;
@@ -600,7 +587,7 @@ final class MinimalEncoder {
       }
 
       // set version to smallest version into which the bits fit.
-      int versionNumber = version.getVersionNumber();
+      int versionNumber = version;
       int lowerLimit;
       int upperLimit;
       switch (getVersionSize(version)) {
@@ -620,16 +607,15 @@ final class MinimalEncoder {
       }
       int size = getSize(version);
       // increase version if needed
-      while (versionNumber < upperLimit && !Encoder.willFit(size, Version.getVersionForNumber(versionNumber),
-        ecLevel)) {
+      while (versionNumber < upperLimit && !Encoder.willFit(size, versionNumber, ecLevel)) {
         versionNumber++;
       }
       // shrink version if possible
-      while (versionNumber > lowerLimit && Encoder.willFit(size, Version.getVersionForNumber(versionNumber - 1),
+      while (versionNumber > lowerLimit && Encoder.willFit(size, versionNumber - 1,
         ecLevel)) {
         versionNumber--;
       }
-      this.version = Version.getVersionForNumber(versionNumber);
+      this.version = versionNumber;
     }
 
     /**
@@ -639,7 +625,7 @@ final class MinimalEncoder {
       return getSize(version);
     }
 
-    private int getSize(Version version) {
+    private int getSize(int version) {
       int result = 0;
       for (ResultNode resultNode : list) {
         result += resultNode.getSize(version);
@@ -656,9 +642,7 @@ final class MinimalEncoder {
       }
     }
 
-    Version getVersion() {
-      return version;
-    }
+    // Mike-INLINED getVersion()
 
     public String toString() {
       StringBuilder result = new StringBuilder();
@@ -690,7 +674,7 @@ final class MinimalEncoder {
       /**
        * returns the size in bits
        */
-      private int getSize(Version version) {
+      private int getSize(int version) {
         int size = 4 + mode.getCharacterCountBits(version);
         switch (mode) {
           case KANJI:

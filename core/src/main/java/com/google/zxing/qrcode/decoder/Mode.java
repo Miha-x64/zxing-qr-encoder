@@ -47,8 +47,7 @@ public enum Mode {
    * @return number of bits used, in this QR Code symbol {@link Version}, to encode the
    *         count of characters that will follow encoded in this Mode
    */
-  public int getCharacterCountBits(Version version) {
-    int number = version.getVersionNumber();
+  public int getCharacterCountBits(int number) {
     int offset;
     if (number <= 9) {
       offset = 0;

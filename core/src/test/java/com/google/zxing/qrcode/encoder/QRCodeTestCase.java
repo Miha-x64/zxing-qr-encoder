@@ -18,7 +18,6 @@ package com.google.zxing.qrcode.encoder;
 
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Mode;
-import com.google.zxing.qrcode.decoder.Version;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +36,7 @@ public final class QRCodeTestCase extends Assert {
         matrix.set(x, y, (y + x) % 2);
       }
     }
-    QRCode qrCode = new QRCode(Mode.BYTE, ErrorCorrectionLevel.H, Version.getVersionForNumber(1), 3, matrix);
+    QRCode qrCode = new QRCode(Mode.BYTE, ErrorCorrectionLevel.H, 1, 3, matrix);
     String expected = "<<\n" +
         " mode: BYTE\n" +
         " ecLevel: H\n" +

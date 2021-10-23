@@ -19,7 +19,6 @@ package com.google.zxing.qrcode.encoder;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import com.google.zxing.qrcode.decoder.Version;
 
 /**
  * @author satorux@google.com (Satoru Takabayashi) - creator
@@ -131,7 +130,7 @@ final class MatrixUtil {
   // success, store the result in "matrix" and return true.
   static void buildMatrix(BitArray dataBits,
                           ErrorCorrectionLevel ecLevel,
-                          Version version,
+                          int version,
                           int maskPattern,
                           ByteMatrix matrix) throws WriterException {
     clearMatrix(matrix);
@@ -150,7 +149,7 @@ final class MatrixUtil {
   // - Timing patterns
   // - Dark dot at the left bottom corner
   // - Position adjustment patterns, if need be
-  static void embedBasicPatterns(Version version, ByteMatrix matrix) throws WriterException {
+  static void embedBasicPatterns(int version, ByteMatrix matrix) throws WriterException {
     // Let's get started with embedding big squares at corners.
     embedPositionDetectionPatternsAndSeparators(matrix);
     // Then, embed the dark dot at the left bottom corner.
@@ -196,8 +195,8 @@ final class MatrixUtil {
 
   // Embed version information if need be. On success, modify the matrix and return true.
   // See 8.10 of JISX0510:2004 (p.47) for how to embed version information.
-  static void maybeEmbedVersionInfo(Version version, ByteMatrix matrix) throws WriterException {
-    if (version.getVersionNumber() < 7) {  // Version info is necessary if version >= 7.
+  static void maybeEmbedVersionInfo(int version, ByteMatrix matrix) throws WriterException {
+    if (version < 7) {  // Version info is necessary if version >= 7.
       return;  // Don't need version info.
     }
     BitArray versionInfoBits = new BitArray();
@@ -342,9 +341,9 @@ final class MatrixUtil {
 
   // Make bit vector of version information. On success, store the result in "bits" and return true.
   // See 8.10 of JISX0510:2004 (p.45) for details.
-  static void makeVersionInfoBits(Version version, BitArray bits) throws WriterException {
-    bits.appendBits(version.getVersionNumber(), 6);
-    int bchCode = calculateBCHCode(version.getVersionNumber(), VERSION_INFO_POLY);
+  static void makeVersionInfoBits(int version, BitArray bits) throws WriterException {
+    bits.appendBits(version, 6);
+    int bchCode = calculateBCHCode(version, VERSION_INFO_POLY);
     bits.appendBits(bchCode, 12);
 
     if (bits.getSize() != 18) {  // Just in case.
@@ -454,11 +453,11 @@ final class MatrixUtil {
   }
 
   // Embed position adjustment patterns if need be.
-  private static void maybeEmbedPositionAdjustmentPatterns(Version version, ByteMatrix matrix) {
-    if (version.getVersionNumber() < 2) {  // The patterns appear if version >= 2
+  private static void maybeEmbedPositionAdjustmentPatterns(int version, ByteMatrix matrix) {
+    if (version < 2) {  // The patterns appear if version >= 2
       return;
     }
-    int index = version.getVersionNumber() - 1;
+    int index = version - 1;
     int[] coordinates = POSITION_ADJUSTMENT_PATTERN_COORDINATE_TABLE[index];
     for (int y : coordinates) {
       if (y >= 0) {
