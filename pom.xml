@@ -53,12 +53,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
-          <archive>
-            <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
-            <manifestEntries>
-              <Automatic-Module-Name>com.google.zxing</Automatic-Module-Name>
-            </manifestEntries>
-          </archive>
+          <!-- Mike-REMOVED <archive /> -->
         </configuration>
       </plugin>
 
