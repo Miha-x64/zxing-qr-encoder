@@ -241,27 +241,29 @@ final class MinimalEncoder {
       end = priorityEncoderIndex + 1;
     }
 
+    // Mike-CHANGED passing stringToEncode and encoders to Edge constructor to avoid capturing
     for (int i = start; i < end; i++) {
       if (encoders[i].canEncode(stringToEncode.charAt(from))) {
-        addEdge(edges, from, new Edge(Mode.BYTE, from, i, 1, previous, version));
+        addEdge(edges, from, new Edge(Mode.BYTE, from, i, 1, previous, version, stringToEncode, encoders));
       }
     }
 
     if (canEncode(Mode.KANJI, stringToEncode.charAt(from))) {
-      addEdge(edges, from, new Edge(Mode.KANJI, from, 0, 1, previous, version));
+      addEdge(edges, from, new Edge(Mode.KANJI, from, 0, 1, previous, version, stringToEncode, encoders));
     }
 
     int inputLength = stringToEncode.length();
     if (canEncode(Mode.ALPHANUMERIC, stringToEncode.charAt(from))) {
       addEdge(edges, from, new Edge(Mode.ALPHANUMERIC, from, 0, from + 1 >= inputLength ||
-          !canEncode(Mode.ALPHANUMERIC, stringToEncode.charAt(from + 1)) ? 1 : 2, previous, version));
+          !canEncode(Mode.ALPHANUMERIC, stringToEncode.charAt(from + 1)) ? 1 : 2, previous, version, stringToEncode, encoders));
     }
 
     if (canEncode(Mode.NUMERIC, stringToEncode.charAt(from))) {
       addEdge(edges, from, new Edge(Mode.NUMERIC, from, 0, from + 1 >= inputLength ||
           !canEncode(Mode.NUMERIC, stringToEncode.charAt(from + 1)) ? 1 : from + 2 >= inputLength ||
-          !canEncode(Mode.NUMERIC, stringToEncode.charAt(from + 2)) ? 2 : 3, previous, version));
+          !canEncode(Mode.NUMERIC, stringToEncode.charAt(from + 2)) ? 2 : 3, previous, version, stringToEncode, encoders));
     }
+    // END Mike-CHANGED
   }
   // Mike-CHANGED to return list without a wrapper; made version parameter inout
   List<ResultNode> encodeSpecificVersion(int[] version) throws WriterException {
@@ -404,7 +406,7 @@ final class MinimalEncoder {
                 minimalSize = edge.cachedTotalSize;
               }
             }
-            assert minimalIndex != -1;
+         // assert minimalIndex != -1; Mike-REMOVED
             minimalEdge = localEdges.get(minimalIndex);
             localEdges.clear();
             localEdges.add(minimalEdge);
@@ -423,7 +425,7 @@ final class MinimalEncoder {
       for (int k = 0; k < 4; k++) {
         if (edges[inputLength][j][k] != null) {
           List<Edge> localEdges = edges[inputLength][j][k];
-          assert localEdges.size() == 1;
+       // assert localEdges.size() == 1; Mike-REMOVED
           Edge edge = localEdges.get(0);
           if (edge.cachedTotalSize < minimalSize) {
             minimalSize = edge.cachedTotalSize;
@@ -439,7 +441,7 @@ final class MinimalEncoder {
     return ResultList(version, edges[inputLength][minimalJ][minimalK].get(0), isGS1, ecLevel, encoders, stringToEncode);
   }
 
-  private final class Edge { // Mike-CHANGED visibilities to package-private to avoid synthetic accessor calls
+  private static final class Edge { // Mike-CHANGED visibilities to package-private; added static modifier
     final Mode mode;
     final int fromPosition;
     final int charsetEncoderIndex;
@@ -447,7 +449,8 @@ final class MinimalEncoder {
     final Edge previous;
     final int cachedTotalSize;
 
-    Edge(Mode mode, int fromPosition, int charsetEncoderIndex, int characterLength, Edge previous, int version) {
+    Edge(Mode mode, int fromPosition, int charsetEncoderIndex, int characterLength, Edge previous, int version,
+         String stringToEncode, CharsetEncoder[] encoders) { // Mike-ADDED params
       this.mode = mode;
       this.fromPosition = fromPosition;
       this.charsetEncoderIndex = mode == Mode.BYTE || previous == null ? charsetEncoderIndex :

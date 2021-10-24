@@ -20,13 +20,14 @@ import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
 import com.google.zxing.common.reedsolomon.GenericGF;
-import com.google.zxing.common.reedsolomon.ReedSolomonEncoder;
+import com.google.zxing.common.reedsolomon.GenericGFPoly;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Mode;
 import com.google.zxing.qrcode.decoder.Version;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -526,7 +527,8 @@ public final class Encoder {
     for (int i = 0; i < numDataBytes; i++) {
       toEncode[i] = dataBytes[i] & 0xFF;
     }
-    new ReedSolomonEncoder(QR_CODE_FIELD_256).encode(toEncode, numEcBytesInBlock);
+    // Mike-CHANGED calling static encode method
+    encodeReedSolomon(QR_CODE_FIELD_256, toEncode, numEcBytesInBlock);
 
     byte[] ecBytes = new byte[numEcBytesInBlock];
     for (int i = 0; i < numEcBytesInBlock; i++) {
@@ -689,8 +691,6 @@ public final class Encoder {
     put2("EUC_CN", "GBK", 29);
 
     put2("EUC_KR", "EUC-KR", 30);
-
-    System.out.println(NAME_TO_ECI);
   }
   private static void put2(byte[] template1, byte[] template2, byte postHi, byte postLo, int value) {
     put2(gen(template1, postHi, postLo), gen(template2, postHi, postLo), value);
@@ -707,6 +707,32 @@ public final class Encoder {
   }
   static Integer eciByName(String name) { // Mike-CHANGED: renamed from getCharacterSetECIByName, returning 'value'
     return NAME_TO_ECI.get(name);
+  }
+
+  // Mike-MOVED from ReedSolomonEncoder
+  static void encodeReedSolomon(GenericGF field, int[] toEncode, int ecBytes) {
+    if (ecBytes == 0) {
+      throw new IllegalArgumentException("No error correction bytes");
+    }
+    int dataBytes = toEncode.length - ecBytes;
+    if (dataBytes <= 0) {
+      throw new IllegalArgumentException("No data bytes provided");
+    }
+
+    // Mike-INLINED and simplified buildGenerator
+    GenericGFPoly generator = new GenericGFPoly(field, new int[]{1});
+    for (int d = 1; d <= ecBytes; d++)
+      generator = generator
+          .multiply(new GenericGFPoly(field, new int[] { 1, field.expTable[d - 1 + field.generatorBase]}));
+
+    int[] infoCoefficients = new int[dataBytes];
+    System.arraycopy(toEncode, 0, infoCoefficients, 0, dataBytes);
+    GenericGFPoly remainder = new GenericGFPoly(field, infoCoefficients)
+        .multiplyByMonomial(ecBytes, 1).remainder(generator); // Mike-CHANGED inlined local variables
+    int[] coefficients = remainder.coefficients;
+    int numZeroCoefficients = ecBytes - coefficients.length;
+    Arrays.fill(toEncode, dataBytes, dataBytes + numZeroCoefficients, 0); // Mike-CHANGED Arrays.fill instead of a loop
+    System.arraycopy(coefficients, 0, toEncode, dataBytes + numZeroCoefficients, coefficients.length);
   }
 
 }

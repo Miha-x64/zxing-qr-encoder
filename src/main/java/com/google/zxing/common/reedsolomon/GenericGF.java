@@ -32,11 +32,11 @@ public final class GenericGF {
   // Mike-REMOVED all static final GenericGFs
 
   // Mike-CHANGED: unprivated expTable, zero, size, generatorBase; removed one and primitive
-  final int[] expTable;
+  public final int[] expTable;
   private final int[] logTable;
   final GenericGFPoly zero;
   final int size;
-  final int generatorBase;
+  public final int generatorBase;
 
   /**
    * Create a representation of GF(size) using the given primitive polynomial.

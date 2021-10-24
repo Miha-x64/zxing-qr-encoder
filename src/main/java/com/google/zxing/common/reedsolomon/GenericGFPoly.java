@@ -25,10 +25,10 @@ package com.google.zxing.common.reedsolomon;
  *
  * @author Sean Owen
  */
-final class GenericGFPoly {
+public final class GenericGFPoly { // Mike-CHANGED: made public to access from QR Encoder
 
   private final GenericGF field;
-  final int[] coefficients; // Mike-CHANGED: unprivated
+  public final int[] coefficients; // Mike-CHANGED: unprivated
 
   /**
    * @param field the {@link GenericGF} instance representing the field to use
@@ -39,7 +39,7 @@ final class GenericGFPoly {
    * or if leading coefficient is 0 and this is not a
    * constant polynomial (that is, it is not the monomial "0")
    */
-  GenericGFPoly(GenericGF field, int[] coefficients) {
+  public GenericGFPoly(GenericGF field, int[] coefficients) { // Mike-CHANGED made public
     if (coefficients.length == 0) {
       throw new IllegalArgumentException();
     }
@@ -119,7 +119,7 @@ final class GenericGFPoly {
     return new GenericGFPoly(field, sumDiff);
   }
 
-  GenericGFPoly multiply(GenericGFPoly other) {
+  public GenericGFPoly multiply(GenericGFPoly other) { // Mike-CHANGED made public
     // Mike-REMOVED equals check 'cause we use a single Field
     if (isZero() || other.isZero()) {
       return field.zero;
@@ -140,7 +140,7 @@ final class GenericGFPoly {
 
   // Mike-REMOVED multiply
 
-  GenericGFPoly multiplyByMonomial(int degree, int coefficient) {
+  public GenericGFPoly multiplyByMonomial(int degree, int coefficient) { // Mike-CHANGED made public
     if (degree < 0) {
       throw new IllegalArgumentException();
     }
@@ -155,8 +155,8 @@ final class GenericGFPoly {
     return new GenericGFPoly(field, product);
   }
 
-  // Mike-CHANGED: removed quotient calculation, returning only remainder
-  GenericGFPoly remainder(GenericGFPoly other) {
+  // Mike-CHANGED: removed quotient calculation, returning only remainder; made public
+  public GenericGFPoly remainder(GenericGFPoly other) {
     // Mike-REMOVED equals check 'cause we use a single Field
     if (other.isZero()) {
       throw new IllegalArgumentException("Divide by 0");

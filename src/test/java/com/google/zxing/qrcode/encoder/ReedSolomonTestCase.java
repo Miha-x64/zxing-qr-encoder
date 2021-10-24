@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.zxing.common.reedsolomon;
+package com.google.zxing.qrcode.encoder;
 
+import com.google.zxing.common.reedsolomon.GenericGF;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -59,13 +60,12 @@ public final class ReedSolomonTestCase extends Assert {
   }
 
   private static void testEncoder(GenericGF field, int[] dataWords, int[] ecWords) {
-    ReedSolomonEncoder encoder = new ReedSolomonEncoder(field);
     int[] messageExpected = new int[dataWords.length + ecWords.length];
     int[] message = new int[dataWords.length + ecWords.length];
     System.arraycopy(dataWords, 0, messageExpected, 0, dataWords.length);
     System.arraycopy(ecWords, 0, messageExpected, dataWords.length, ecWords.length);
     System.arraycopy(dataWords, 0, message, 0, dataWords.length);
-    encoder.encode(message, ecWords.length);
+    Encoder.encodeReedSolomon(field, message, ecWords.length);
     assertDataEquals("Encode in " + field + " (" + dataWords.length + ',' + ecWords.length + ") failed",
                      messageExpected, message);
   }
