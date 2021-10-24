@@ -16,19 +16,17 @@
 
 package com.google.zxing.qrcode.encoder;
 
-import com.google.zxing.qrcode.decoder.Mode;
-import com.google.zxing.common.BitArray;
-import com.google.zxing.common.CharacterSetECI;
 import com.google.zxing.WriterException;
+import com.google.zxing.common.BitArray;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
+import com.google.zxing.qrcode.decoder.Mode;
 
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.ArrayList;
 import java.util.List;
-
-import java.nio.charset.UnsupportedCharsetException;
 
 /**
  * Encoder that encodes minimally
@@ -80,7 +78,7 @@ final class MinimalEncoder {
     }
   }
   private static void tryAddEncoder(String name) {
-    if (CharacterSetECI.getCharacterSetECIByName(name) != null) {
+    if (Encoder.eciByName(name) != null) {
       try {
         ENCODERS.add(Charset.forName(name).newEncoder());
       } catch (UnsupportedCharsetException e) {
@@ -633,7 +631,7 @@ final class MinimalEncoder {
         bits.appendBits(length, mode.getCharacterCountBits(version));
       }
       if (mode == Mode.ECI) {
-        bits.appendBits(CharacterSetECI.getCharacterSetECI(encoder.charset()).getValue(), 8);
+        bits.appendBits(Encoder.eciByName(encoder.charset().name()), 8);
       } else if (characterLength > 0) {
         // append data
         Encoder.appendBytes(stringToEncode, fromPosition, fromPosition + characterLength, mode, bits, encoder.charset());

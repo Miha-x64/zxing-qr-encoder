@@ -19,7 +19,6 @@ package com.google.zxing.qrcode.encoder;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
-import com.google.zxing.common.CharacterSetECI;
 import com.google.zxing.common.reedsolomon.GenericGF;
 import com.google.zxing.common.reedsolomon.ReedSolomonEncoder;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
@@ -28,6 +27,7 @@ import com.google.zxing.qrcode.decoder.Version;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -170,7 +170,7 @@ public final class Encoder {
 
       // Append ECI segment if applicable
       if (mode == Mode.BYTE && hasEncodingHint) {
-        CharacterSetECI eci = CharacterSetECI.getCharacterSetECI(encoding);
+        Integer eci = eciByName(encoding.name());
         if (eci != null) {
           appendECI(eci, headerBits);
         }
@@ -639,12 +639,74 @@ public final class Encoder {
     }
   }
 
-  private static void appendECI(CharacterSetECI eci, BitArray bits) {
+  private static void appendECI(int eci, BitArray bits) { // Mike-CHANGED accept int ECI value
     bits.appendBits(Mode.ECI.getBits(), 4);
     // This is correct for values up to 127, which is all we need now.
-    bits.appendBits(eci.getValue(), 8);
+    bits.appendBits(eci, 8);
   }
 
   // Mike-REMOVED BlockPair
+
+  // Mike-MOVED from CharacterSetECI and compacted
+  private static final Map<String, Integer> NAME_TO_ECI = new HashMap<>(45); static {
+    NAME_TO_ECI.put("Cp437", 0);
+
+    byte[] name1 = "ISO8859_\0\0".getBytes(), name2 = "ISO-8859-\0\0".getBytes();
+    put2(name1, name2, (byte) '1', (byte) '\0', 1);
+    put2(name1, name2, (byte) '2', (byte) '\0', 4);
+    put2(name1, name2, (byte) '3', (byte) '\0', 5);
+    put2(name1, name2, (byte) '4', (byte) '\0', 6);
+    put2(name1, name2, (byte) '5', (byte) '\0', 7);
+ // put2(name1, name2, (byte) '6', (byte) '\0', 8);
+    put2(name1, name2, (byte) '7', (byte) '\0', 9);
+ // put2(name1, name2, (byte) '8', (byte) '\0', 10);
+    put2(name1, name2, (byte) '9', (byte) '\0', 11);
+ // put2(name1, name2, (byte) '1', (byte) '0', 12);
+ // put2(name1, name2, (byte) '1', (byte) '1', 13);
+    put2(name1, name2, (byte) '1', (byte) '3', 15);
+ // put2(name1, name2, (byte) '1', (byte) '4', 16);
+    put2(name1, name2, (byte) '1', (byte) '5', 17);
+    put2(name1, name2, (byte) '1', (byte) '6', 18);
+
+    put2("SJIS", "Shift_JIS", 20);
+
+    name1 = "Cp125\0\0".getBytes(); name2 = "windows-125\0\0".getBytes();
+    put2(name1, name2, (byte) '0', (byte) '\0', 21);
+    put2(name1, name2, (byte) '1', (byte) '\0', 22);
+    put2(name1, name2, (byte) '2', (byte) '\0', 23);
+    put2(name1, name2, (byte) '6', (byte) '\0', 24);
+
+    put2("UnicodeBigUnmarked", "UTF-16BE", 25);
+    NAME_TO_ECI.put("UnicodeBig", 25);
+
+    put2("UTF8", "UTF-8", 26);
+
+    put2("ASCII", "US-ASCII", 27);
+
+    NAME_TO_ECI.put("Big5", 28);
+
+    put2("GB18030", "GB2312", 29);
+    put2("EUC_CN", "GBK", 29);
+
+    put2("EUC_KR", "EUC-KR", 30);
+
+    System.out.println(NAME_TO_ECI);
+  }
+  private static void put2(byte[] template1, byte[] template2, byte postHi, byte postLo, int value) {
+    put2(gen(template1, postHi, postLo), gen(template2, postHi, postLo), value);
+  }
+  private static String gen(byte[] template, byte postHi, byte postLo) {
+    int last = template.length - 1;
+    template[last-1] = postHi;
+    template[last] = postLo;
+    return new String(template, 0, last + (postLo == '\0' ? 0 : 1));
+  }
+  private static void put2(String s1, String s2, int value) {
+    NAME_TO_ECI.put(s1, value);
+    NAME_TO_ECI.put(s2, value);
+  }
+  static Integer eciByName(String name) { // Mike-CHANGED: renamed from getCharacterSetECIByName, returning 'value'
+    return NAME_TO_ECI.get(name);
+  }
 
 }
