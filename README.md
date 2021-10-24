@@ -1,3 +1,45 @@
+
+## This fork
+
+Nothing except QR encoding.
+
+![Analyze APK screenshot](size.png)
+
+[![](https://jitpack.io/v/Miha-x64/zxing-qr-encoder.svg)](https://jitpack.io/#Miha-x64/zxing-qr-encoder)
+
+Android usage sample:
+
+```kotlin
+addView(object : View(context) {
+    private val qr = Encoder.encode(data, ErrorCorrectionLevel.H).matrix
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val size = MeasureSpec.getSize(widthMeasureSpec)
+        val side = size / qr.width
+        setMeasuredDimension(qr.width * side, qr.height * side)
+    }
+    private val paint = Paint() // black by default
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val side = min(width / qr.width, height / qr.height)
+        repeat(qr.width) { x ->
+            repeat(qr.height) { y ->
+                if (qr[x, y] == 1.toByte()) {
+                    val left = x * side
+                    val top = y * side
+                    canvas.drawRect(
+                        left.toFloat(), top.toFloat(),
+                        (left + side).toFloat(), (top + side).toFloat(),
+                        paint
+                    )
+                }
+            }
+        }
+    }
+}, LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+```
+
+____
+
 <img align="right" src="https://raw.github.com/wiki/zxing/zxing/zxing-logo.png"/>
 
 ## Project in Maintenance Mode Only
