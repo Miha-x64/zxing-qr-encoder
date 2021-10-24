@@ -115,7 +115,7 @@ final class GenericGFPoly {
     System.arraycopy(largerCoefficients, 0, sumDiff, 0, lengthDiff);
 
     for (int i = lengthDiff; i < largerCoefficients.length; i++) {
-      sumDiff[i] = GenericGF.addOrSubtract(smallerCoefficients[i - lengthDiff], largerCoefficients[i]);
+      sumDiff[i] = smallerCoefficients[i - lengthDiff] ^ largerCoefficients[i]; // Mike-CHANGED: inlined addOrSubtract
     }
 
     return new GenericGFPoly(field, sumDiff);
@@ -136,8 +136,7 @@ final class GenericGFPoly {
     for (int i = 0; i < aLength; i++) {
       int aCoeff = aCoefficients[i];
       for (int j = 0; j < bLength; j++) {
-        product[i + j] = GenericGF.addOrSubtract(product[i + j],
-            field.multiply(aCoeff, bCoefficients[j]));
+        product[i + j] = product[i + j] ^ field.multiply(aCoeff, bCoefficients[j]); // Mike-CHANGED: inlined addOrSubtract
       }
     }
     return new GenericGFPoly(field, product);

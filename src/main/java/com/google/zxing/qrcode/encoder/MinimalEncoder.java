@@ -59,66 +59,44 @@ import java.nio.charset.UnsupportedCharsetException;
  */
 final class MinimalEncoder {
 
-  private enum VersionSize {
-    SMALL("version 1-9"),
-    MEDIUM("version 10-26"),
-    LARGE("version 27-40");
-
-    private final String description;
-
-    VersionSize(String description) {
-      this.description = description;
-    }
-
-    public String toString() {
-      return description;
-    }
-  }
+  // Mike-CHANGED: compacted VersionSize
+  private static final int VERSIONS = 40 << 24 | 26 << 16 | 9 << 8 /*| 0*/;
 
   // List of encoders that potentially encode characters not in ISO-8859-1 in one byte.
   private static final List<CharsetEncoder> ENCODERS = new ArrayList<>();
-  static {
-    final String[] names = { "ISO-8859-2",
-                             "ISO-8859-3",
-                             "ISO-8859-4",
-                             "ISO-8859-5",
-                             "ISO-8859-6",
-                             "ISO-8859-7",
-                             "ISO-8859-8",
-                             "ISO-8859-9",
-                             "ISO-8859-10",
-                             "ISO-8859-11",
-                             "ISO-8859-13",
-                             "ISO-8859-14",
-                             "ISO-8859-15",
-                             "ISO-8859-16",
-                             "windows-1250",
-                             "windows-1251",
-                             "windows-1252",
-                             "windows-1253",
-                             "windows-1254",
-                             "windows-1255",
-                             "windows-1256",
-                             "windows-1257",
-                             "windows-1258",
-                             "Shift_JIS" };
-    for (String name : names) {
-      if (CharacterSetECI.getCharacterSetECIByName(name) != null) {
-        try {
-          ENCODERS.add(Charset.forName(name).newEncoder());
-        } catch (UnsupportedCharsetException e) {
-          // continue
-        }
+  static { // Mike-CHANGED encoder search algorithm
+    StringBuilder sb = new StringBuilder("ISO-8859-");
+    tryAddEncoder(sb, 2, 12);
+    tryAddEncoder(sb, 13, 17);
+    sb.delete(0, sb.length()).append("windows-125");
+    tryAddEncoder(sb, 0, 9);
+    tryAddEncoder("Shift_JIS");
+  }
+  private static void tryAddEncoder(StringBuilder sb, int start, int until) {
+    int length = sb.length();
+    for (int i = start; i < until; i++) {
+      tryAddEncoder(sb.append(i).toString());
+      sb.setLength(length);
+    }
+  }
+  private static void tryAddEncoder(String name) {
+    if (CharacterSetECI.getCharacterSetECIByName(name) != null) {
+      try {
+        ENCODERS.add(Charset.forName(name).newEncoder());
+      } catch (UnsupportedCharsetException e) {
+        // continue
       }
     }
   }
 
 
-  private final String stringToEncode;
-  private final boolean isGS1;
-  private final CharsetEncoder[] encoders;
+  // Mike-CHANGED unprivated
+  final String stringToEncode;
+  final boolean isGS1;
+  final CharsetEncoder[] encoders;
   private final int priorityEncoderIndex;
-  private final ErrorCorrectionLevel ecLevel;
+  final ErrorCorrectionLevel ecLevel;
+  // END Mike-CHANGED
 
   /**
    * Creates a MinimalEncoder
@@ -191,72 +169,47 @@ final class MinimalEncoder {
     priorityEncoderIndex = priorityEncoderIndexValue;
   }
 
-  /**
-   * Encodes the string minimally
-   *
-   * @param stringToEncode The string to encode
-   * @param priorityCharset The preferred {@link Charset}. When the value of the argument is null, the algorithm
-   *   chooses charsets that leads to a minimal representation. Otherwise the algorithm will use the priority
-   *   charset to encode any character in the input that can be encoded by it if the charset is among the
-   *   supported charsets.
-   * @param isGS1 {@code true} if a FNC1 is to be prepended; {@code false} otherwise
-   * @param ecLevel The error correction level.
-   * @return An instance of {@code ResultList} representing the minimal solution.
-   * @see ResultList#getBits
-   * @see ResultList#getVersion
-   * @see ResultList#getSize
-   */ // Mike-REMOVED version
-  static ResultList encode(String stringToEncode, Charset priorityCharset, boolean isGS1,
-                           ErrorCorrectionLevel ecLevel) throws WriterException {
-    return new MinimalEncoder(stringToEncode, priorityCharset, isGS1, ecLevel).encode();
-  }
+  // Mike-REMOVED version, encode
 
   // Mike-REMOVED version
-  private static final int[] TRY_VERSIONS = {9, 26, 40}; // Mike-MOVED
-  ResultList encode() throws WriterException {
+  List<ResultNode> encode(int[] outVersion) throws WriterException {
     // compute minimal encoding trying the three version sizes.
-    ResultList[] results = {
-        encodeSpecificVersion(TRY_VERSIONS[0]),
-        encodeSpecificVersion(TRY_VERSIONS[1]),
-        encodeSpecificVersion(TRY_VERSIONS[2])
-    };
+    List<ResultNode> result = null;
     int smallestSize = Integer.MAX_VALUE;
     int smallestResult = -1;
     for (int i = 0; i < 3; i++) {
-      int size = results[i].getSize();
-      if (Encoder.willFit(size, TRY_VERSIONS[i], ecLevel) && size < smallestSize) {
+      // Mike-CHANGED generation algorithm and added setting outVersion
+      int tryVersion = (VERSIONS >>> (8 * (i + 1))) & 0xFF;
+      int prevOutVersion = outVersion[0];
+      outVersion[0] = tryVersion;
+      List<ResultNode> r = encodeSpecificVersion(outVersion);
+      int size = getSize(r, outVersion[0]);
+      if (Encoder.willFit(size, tryVersion, ecLevel) && size < smallestSize) {
         smallestSize = size;
         smallestResult = i;
+        result = r;
+      } else {
+        outVersion[0] = prevOutVersion;
       }
     }
     if (smallestResult < 0) {
       throw new WriterException("Data too big for any version");
     }
-    return results[smallestResult];
+    return result;
   }
 
-  static VersionSize getVersionSize(int version) {
-    return version <= 9 ? VersionSize.SMALL : version <= 26 ? VersionSize.MEDIUM : VersionSize.LARGE;
+  // Mike-CHANGED from returnung enum
+  static int getVersionSize(int version) {
+    return version <= 9 ? 0 : version <= 26 ? 1 : 2;
   }
 
-  static boolean isNumeric(char c) {
-    return c >= '0' && c <= '9';
-  }
-
-  static boolean isDoubleByteKanji(char c) {
-    return Encoder.isOnlyDoubleByteKanji(String.valueOf(c));
-  }
-
-  static boolean isAlphanumeric(char c) {
-    return Encoder.getAlphanumericCode(c) != -1;
-  }
-
+  // Mike-CHANGED: inlined isNumeric, isDoubleByteKanji, isAlphanumeric; replaced enum switch with ordinal switch
   boolean canEncode(Mode mode, char c) {
-    switch (mode) {
-      case KANJI: return isDoubleByteKanji(c);
-      case ALPHANUMERIC: return isAlphanumeric(c);
-      case NUMERIC: return isNumeric(c);
-      case BYTE: return true; // any character can be encoded as byte(s). Up to the caller to manage splitting into
+    switch (mode.ordinal()) {
+      case 0: return Encoder.isOnlyDoubleByteKanji(String.valueOf(c));
+      case 1: return Encoder.getAlphanumericCode(c) != -1;
+      case 2: return c >= '0' && c <= '9';
+      case 3: return true; // any character can be encoded as byte(s). Up to the caller to manage splitting into
                               // multiple bytes when String.getBytes(Charset) return more than one byte.
       default:
         return false;
@@ -264,20 +217,13 @@ final class MinimalEncoder {
   }
 
   static int getCompactedOrdinal(Mode mode) {
+    int ord; // Mike-CHANGED eliminated switch
     if (mode == null) {
       return 0;
-    }
-    switch (mode) {
-      case KANJI:
-        return 0;
-      case ALPHANUMERIC:
-        return 1;
-      case NUMERIC:
-        return 2;
-      case BYTE:
-        return 3;
-      default:
-        throw new IllegalStateException("Illegal mode " + mode);
+    } else if ((ord = mode.ordinal()) > 3) {
+      throw new IllegalStateException("Illegal mode " + mode);
+    } else {
+      return ord;
     }
   }
 
@@ -319,7 +265,8 @@ final class MinimalEncoder {
           !canEncode(Mode.NUMERIC, stringToEncode.charAt(from + 2)) ? 2 : 3, previous, version));
     }
   }
-  ResultList encodeSpecificVersion(int version) throws WriterException {
+  // Mike-CHANGED to return list without a wrapper; made version parameter inout
+  List<ResultNode> encodeSpecificVersion(int[] version) throws WriterException {
 
     @SuppressWarnings("checkstyle:lineLength")
     /* A vertex represents a tuple of a position in the input, a mode and a character encoding where position 0
@@ -441,7 +388,8 @@ final class MinimalEncoder {
     // function getCompactedOrdinal(Mode)
     @SuppressWarnings("unchecked")
     List<Edge>[][][] edges = new ArrayList[inputLength + 1][encoders.length][4];
-    addEdges(version, edges, 0, null);
+    int v = version[0];
+    addEdges(v, edges, 0, null);
 
     for (int i = 1; i <= inputLength; i++) {
       for (int j = 0; j < encoders.length; j++) {
@@ -463,7 +411,7 @@ final class MinimalEncoder {
             localEdges.clear();
             localEdges.add(minimalEdge);
             if (i < inputLength) {
-              addEdges(version, edges, i, minimalEdge);
+              addEdges(v, edges, i, minimalEdge);
             }
           }
         }
@@ -490,18 +438,18 @@ final class MinimalEncoder {
     if (minimalJ < 0) {
       throw new WriterException("Internal error: failed to encode \"" + stringToEncode + "\"");
     }
-    return new ResultList(version, edges[inputLength][minimalJ][minimalK].get(0));
+    return ResultList(version, edges[inputLength][minimalJ][minimalK].get(0), isGS1, ecLevel, encoders, stringToEncode);
   }
 
-  private final class Edge {
-    private final Mode mode;
-    private final int fromPosition;
-    private final int charsetEncoderIndex;
-    private final int characterLength;
-    private final Edge previous;
-    private final int cachedTotalSize;
+  private final class Edge { // Mike-CHANGED visibilities to package-private to avoid synthetic accessor calls
+    final Mode mode;
+    final int fromPosition;
+    final int charsetEncoderIndex;
+    final int characterLength;
+    final Edge previous;
+    final int cachedTotalSize;
 
-    private Edge(Mode mode, int fromPosition, int charsetEncoderIndex, int characterLength, Edge previous, int version) {
+    Edge(Mode mode, int fromPosition, int charsetEncoderIndex, int characterLength, Edge previous, int version) {
       this.mode = mode;
       this.fromPosition = fromPosition;
       this.charsetEncoderIndex = mode == Mode.BYTE || previous == null ? charsetEncoderIndex :
@@ -528,9 +476,8 @@ final class MinimalEncoder {
         case NUMERIC:
           size += characterLength == 1 ? 4 : characterLength == 2 ? 7 : 10;
           break;
-        case BYTE:
-          size += 8 * stringToEncode.substring(fromPosition, fromPosition + characterLength).getBytes(
-              encoders[charsetEncoderIndex].charset()).length;
+        case BYTE: // Mike-CHANGED outlined method
+          size += 8 * uglyFuckingByteCount(stringToEncode, encoders[charsetEncoderIndex], fromPosition, characterLength);
           if (needECI) {
             size += 4 + 8; // the ECI assignment numbers for ISO-8859-x, UTF-8 and UTF-16 are all 8 bit long
           }
@@ -540,214 +487,180 @@ final class MinimalEncoder {
     }
   }
 
-  final class ResultList {
+  // Mike-ADDED
+  static int uglyFuckingByteCount(String stringToEncode, CharsetEncoder encoder, int fromPosition, int characterLength) {
+    return stringToEncode.substring(fromPosition, fromPosition + characterLength).getBytes(encoder.charset()).length;
+  }
 
-    private final List<ResultList.ResultNode> list = new ArrayList<>();
-    final int version; // Mike-CHANGED visibility (and type, of course)
+  // Mike-CHANGED replaced class with a method
+  List<ResultNode> ResultList(int[] version, Edge solution, boolean isGS1, ErrorCorrectionLevel ecLevel, CharsetEncoder[] encoders, String stringToEncode) {
+    int length = 0;
+    Edge current = solution;
+    boolean containsECI = false;
 
-    ResultList(int version, Edge solution) {
-      int length = 0;
-      Edge current = solution;
-      boolean containsECI = false;
+    List<ResultNode> list = new ArrayList<>();
+    while (current != null) {
+      length += current.characterLength;
+      Edge previous = current.previous;
 
-      while (current != null) {
-        length += current.characterLength;
-        Edge previous = current.previous;
+      boolean needECI = current.mode == Mode.BYTE &&
+          (previous == null && current.charsetEncoderIndex != 0) || // at the beginning and charset is not ISO-8859-1
+          (previous != null && current.charsetEncoderIndex != previous.charsetEncoderIndex);
 
-        boolean needECI = current.mode == Mode.BYTE &&
-            (previous == null && current.charsetEncoderIndex != 0) || // at the beginning and charset is not ISO-8859-1
-            (previous != null && current.charsetEncoderIndex != previous.charsetEncoderIndex);
-
-        if (needECI) {
-          containsECI = true;
-        }
-
-        if (previous == null || previous.mode != current.mode || needECI) {
-          list.add(0, new ResultNode(current.mode, current.fromPosition, current.charsetEncoderIndex, length));
-          length = 0;
-        }
-
-        if (needECI) {
-          list.add(0, new ResultNode(Mode.ECI, current.fromPosition, current.charsetEncoderIndex, 0));
-        }
-        current = previous;
+      if (needECI) {
+        containsECI = true;
       }
 
-      // prepend FNC1 if needed. If the bits contain an ECI then the FNC1 must be preceeded by an ECI.
-      // If there is no ECI at the beginning then we put an ECI to the default charset (ISO-8859-1)
-      if (isGS1) {
-        ResultNode first = list.get(0);
-        if (first != null && first.mode != Mode.ECI && containsECI) {
-          // prepend a default character set ECI
-          list.add(0, new ResultNode(Mode.ECI, 0, 0, 0));
-        }
-        first = list.get(0);
-        // prepend or insert a FNC1_FIRST_POSITION after the ECI (if any)
-        list.add(first.mode != Mode.ECI ? 0 : 1, new ResultNode(Mode.FNC1_FIRST_POSITION, 0, 0, 0));
+      if (previous == null || previous.mode != current.mode || needECI) {
+        list.add(0, new ResultNode(current.mode, current.fromPosition, encoders[current.charsetEncoderIndex], length, stringToEncode));
+        length = 0;
       }
 
-      // set version to smallest version into which the bits fit.
-      int versionNumber = version;
-      int lowerLimit;
-      int upperLimit;
-      switch (getVersionSize(version)) {
-        case SMALL:
-          lowerLimit = 1;
-          upperLimit = 9;
-          break;
-        case MEDIUM:
-          lowerLimit = 10;
-          upperLimit = 26;
-          break;
-        case LARGE:
-        default:
-          lowerLimit = 27;
-          upperLimit = 40;
-          break;
+      if (needECI) {
+        list.add(0, new ResultNode(Mode.ECI, current.fromPosition, encoders[current.charsetEncoderIndex], 0, stringToEncode));
       }
-      int size = getSize(version);
-      // increase version if needed
-      while (versionNumber < upperLimit && !Encoder.willFit(size, versionNumber, ecLevel)) {
-        versionNumber++;
+      current = previous;
+    }
+
+    // prepend FNC1 if needed. If the bits contain an ECI then the FNC1 must be preceeded by an ECI.
+    // If there is no ECI at the beginning then we put an ECI to the default charset (ISO-8859-1)
+    if (isGS1) {
+      ResultNode first = list.get(0);
+      if (first != null && first.mode != Mode.ECI && containsECI) {
+        // prepend a default character set ECI
+        list.add(0, new ResultNode(Mode.ECI, 0, null, 0, stringToEncode));
       }
-      // shrink version if possible
-      while (versionNumber > lowerLimit && Encoder.willFit(size, versionNumber - 1,
-        ecLevel)) {
-        versionNumber--;
+      first = list.get(0);
+      // prepend or insert a FNC1_FIRST_POSITION after the ECI (if any)
+      list.add(first.mode != Mode.ECI ? 0 : 1, new ResultNode(Mode.FNC1_FIRST_POSITION, 0, null, 0, stringToEncode));
+    }
+
+    // set version to smallest version into which the bits fit.
+    int v = version[0]; // Mike-CHANGED version determining algorithm
+    int vSize = getVersionSize(v);
+    int size = getSize(list, v);
+    // increase version if needed
+    int upperLimit = (VERSIONS >>> (8 * (vSize + 1))) & 0xFF;
+    while (v < upperLimit && !Encoder.willFit(size, v, ecLevel)) v++;
+    // shrink version if possible
+    int lowerLimit = (VERSIONS >>> (8 * (vSize + 1)) & 0xFF);
+    while (v > lowerLimit && Encoder.willFit(size, v - 1, ecLevel)) v--;
+    version[0] = v;
+    return list;
+  }
+
+  // Mike-REMOVED getSize()
+  int getSize(List<ResultNode> list, int version) { // Mike-CHANGED parameters
+    int result = 0;
+    for (ResultNode resultNode : list) {
+      result += resultNode.getSize(version);
+    }
+    return result;
+  }
+
+  /**
+   * appends the bits
+   */
+  void getBits(List<ResultNode> list, BitArray bits, int version) throws WriterException {
+    for (ResultNode resultNode : list) { // Mike-CHANGED parameters
+      resultNode.getBits(bits, version);
+    }
+  }
+
+  // Mike-INLINED getVersion()
+
+  public String toString(List<ResultNode> list) { // Mike-CHANGED parameters
+    StringBuilder result = new StringBuilder();
+    ResultNode previous = null;
+    for (ResultNode current : list) {
+      if (previous != null) {
+        result.append(",");
       }
-      this.version = versionNumber;
+      result.append(current.toString());
+      previous = current;
+    }
+    return result.toString();
+  }
+
+  static final class ResultNode {  // Mike-CHANGED parameters, made static, unprivated mode
+
+    final Mode mode; // Mike-CHANGED visibility to package-private
+    private final int fromPosition;
+    private final CharsetEncoder encoder;
+    private final int characterLength;
+    private final String stringToEncode;
+
+    ResultNode(Mode mode, int fromPosition, CharsetEncoder encoder, int characterLength, String stringToEncode) {
+      this.mode = mode;
+      this.fromPosition = fromPosition;
+      this.encoder = encoder;
+      this.characterLength = characterLength;
+      this.stringToEncode = stringToEncode;
     }
 
     /**
      * returns the size in bits
      */
-    int getSize() {
-      return getSize(version);
+    int getSize(int version) { // Mike-CHANGED visibility to package-private
+      int size = 4 + mode.getCharacterCountBits(version);
+      switch (mode) {
+        case KANJI:
+          size += 13 * characterLength;
+          break;
+        case ALPHANUMERIC:
+          size += (characterLength / 2) * 11;
+          size += (characterLength % 2) == 1 ? 6 : 0;
+          break;
+        case NUMERIC:
+          size += (characterLength / 3) * 10;
+          int rest = characterLength % 3;
+          size += rest == 1 ? 4 : rest == 2 ? 7 : 0;
+          break;
+        case BYTE:
+          size += 8 * getCharacterCountIndicator();
+          break;
+        case ECI:
+          size += 8; // the ECI assignment numbers for ISO-8859-x, UTF-8 and UTF-16 are all 8 bit long
+      }
+      return size;
     }
 
-    private int getSize(int version) {
-      int result = 0;
-      for (ResultNode resultNode : list) {
-        result += resultNode.getSize(version);
-      }
-      return result;
+    /**
+     * returns the length in characters according to the specification (differs from getCharacterLength() in BYTE mode
+     * for multi byte encoded characters)
+     */
+    private int getCharacterCountIndicator() { // Mike-CHANGED outlined method
+      return mode == Mode.BYTE ? uglyFuckingByteCount(stringToEncode, encoder, fromPosition, characterLength) : characterLength;
     }
 
     /**
      * appends the bits
      */
-    void getBits(BitArray bits) throws WriterException {
-      for (ResultNode resultNode : list) {
-        resultNode.getBits(bits);
+    void getBits(BitArray bits, int version) throws WriterException { // Mike-CHANGED visibility to package-private
+      bits.appendBits(mode.getBits(), 4);
+      if (characterLength > 0) {
+        int length = getCharacterCountIndicator();
+        bits.appendBits(length, mode.getCharacterCountBits(version));
+      }
+      if (mode == Mode.ECI) {
+        bits.appendBits(CharacterSetECI.getCharacterSetECI(encoder.charset()).getValue(), 8);
+      } else if (characterLength > 0) {
+        // append data
+        Encoder.appendBytes(stringToEncode, fromPosition, fromPosition + characterLength, mode, bits, encoder.charset());
       }
     }
 
-    // Mike-INLINED getVersion()
-
-    public String toString() {
-      StringBuilder result = new StringBuilder();
-      ResultNode previous = null;
-      for (ResultNode current : list) {
-        if (previous != null) {
-          result.append(",");
-        }
-        result.append(current.toString());
-        previous = current;
-      }
-      return result.toString();
-    }
-
-    final class ResultNode {
-
-      private final Mode mode;
-      private final int fromPosition;
-      private final int charsetEncoderIndex;
-      private final int characterLength;
-
-      ResultNode(Mode mode, int fromPosition, int charsetEncoderIndex, int characterLength) {
-        this.mode = mode;
-        this.fromPosition = fromPosition;
-        this.charsetEncoderIndex = charsetEncoderIndex;
-        this.characterLength = characterLength;
-      }
-
-      /**
-       * returns the size in bits
-       */
-      private int getSize(int version) {
-        int size = 4 + mode.getCharacterCountBits(version);
-        switch (mode) {
-          case KANJI:
-            size += 13 * characterLength;
-            break;
-          case ALPHANUMERIC:
-            size += (characterLength / 2) * 11;
-            size += (characterLength % 2) == 1 ? 6 : 0;
-            break;
-          case NUMERIC:
-            size += (characterLength / 3) * 10;
-            int rest = characterLength % 3;
-            size += rest == 1 ? 4 : rest == 2 ? 7 : 0;
-            break;
-          case BYTE:
-            size += 8 * getCharacterCountIndicator();
-            break;
-          case ECI:
-            size += 8; // the ECI assignment numbers for ISO-8859-x, UTF-8 and UTF-16 are all 8 bit long
-        }
-        return size;
-      }
-
-      /**
-       * returns the length in characters according to the specification (differs from getCharacterLength() in BYTE mode
-       * for multi byte encoded characters)
-       */
-      private int getCharacterCountIndicator() {
-        return mode == Mode.BYTE ? stringToEncode.substring(fromPosition, fromPosition + characterLength).getBytes(
-            encoders[charsetEncoderIndex].charset()).length : characterLength;
-      }
-
-      /**
-       * appends the bits
-       */
-      private void getBits(BitArray bits) throws WriterException {
-        bits.appendBits(mode.getBits(), 4);
-        if (characterLength > 0) {
-          int length = getCharacterCountIndicator();
-          bits.appendBits(length, mode.getCharacterCountBits(version));
-        }
-        if (mode == Mode.ECI) {
-          bits.appendBits(CharacterSetECI.getCharacterSetECI(encoders[charsetEncoderIndex].charset()).getValue(), 8);
-        } else if (characterLength > 0) {
-          // append data
-          Encoder.appendBytes(stringToEncode.substring(fromPosition, fromPosition + characterLength), mode, bits,
-              encoders[charsetEncoderIndex].charset());
+    public String toString() { // Mike-REWORKED: inlined makePrintable, eliminated extra StringBuilder
+      StringBuilder result = new StringBuilder(mode.name()).append('(');
+      if (mode == Mode.ECI) {
+        result.append(encoder.charset().displayName());
+      } else {
+        for (int i = fromPosition; i < fromPosition + characterLength; i++) {
+          result.append(
+              stringToEncode.charAt(i) < 32 || stringToEncode.charAt(i) > 126 ? '.' : stringToEncode.charAt(i));
         }
       }
-
-      public String toString() {
-        StringBuilder result = new StringBuilder();
-        result.append(mode).append('(');
-        if (mode == Mode.ECI) {
-          result.append(encoders[charsetEncoderIndex].charset().displayName());
-        } else {
-          result.append(makePrintable(stringToEncode.substring(fromPosition, fromPosition + characterLength)));
-        }
-        result.append(')');
-        return result.toString();
-      }
-
-      private String makePrintable(String s) {
-        StringBuilder result = new StringBuilder();
-        for (int i = 0; i < s.length(); i++) {
-          if (s.charAt(i) < 32 || s.charAt(i) > 126) {
-            result.append('.');
-          } else {
-            result.append(s.charAt(i));
-          }
-        }
-        return result.toString();
-      }
+      return result.append(')').toString();
     }
   }
 }

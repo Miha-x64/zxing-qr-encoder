@@ -21,6 +21,8 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
+import static com.google.zxing.qrcode.encoder.Encoder.QR_CODE_FIELD_256;
+
 /**
  * @author Rustam Abdullaev
  */
@@ -29,7 +31,7 @@ public final class ReedSolomonTestCase extends Assert {
   @Test
   public void testQRCode() {
     // Test case from example given in ISO 18004, Annex I
-    testEncodeDecode(GenericGF.QR_CODE_FIELD_256,
+    testEncodeDecode(QR_CODE_FIELD_256,
         new int[] {
           0x10, 0x20, 0x0C, 0x56, 0x61, 0x80, 0xEC, 0x11,
           0xEC, 0x11, 0xEC, 0x11, 0xEC, 0x11, 0xEC, 0x11
@@ -38,7 +40,7 @@ public final class ReedSolomonTestCase extends Assert {
           0xA5, 0x24, 0xD4, 0xC1, 0xED, 0x36, 0xC7, 0x87,
           0x2C, 0x55
         });
-    testEncodeDecode(GenericGF.QR_CODE_FIELD_256,
+    testEncodeDecode(QR_CODE_FIELD_256,
         new int[] {
           0x72, 0x67, 0x2F, 0x77, 0x69, 0x6B, 0x69, 0x2F,
           0x4D, 0x61, 0x69, 0x6E, 0x5F, 0x50, 0x61, 0x67,

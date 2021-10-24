@@ -28,8 +28,7 @@ import com.google.zxing.qrcode.decoder.Version;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -42,7 +41,7 @@ public final class Encoder {
   static final Charset SHIFT_JIS_CHARSET = Charset.forName("SJIS");
 
   // The original table is defined in the table 5 of JISX0510:2004 (p.19).
-  private static final int[] ALPHANUMERIC_TABLE = {
+  private static final byte[] ALPHANUMERIC_TABLE = { // Mike-CHANGED from int[]
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 0x00-0x0f
       -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,  // 0x10-0x1f
       36, -1, -1, -1, 37, 38, -1, -1, -1, -1, 39, 40, -1, 41, 42, 43,  // 0x20-0x2f
@@ -53,16 +52,66 @@ public final class Encoder {
 
   static final Charset DEFAULT_BYTE_MODE_ENCODING = StandardCharsets.ISO_8859_1;
 
+  // Mike-MOVED from GenericGF
+  public static final GenericGF QR_CODE_FIELD_256 = new GenericGF(0x011D, 256, 0); // x^8 + x^4 + x^3 + x^2 + 1
+
+  // Mike-MOVED from MatrixUtil
+  // From Appendix E. Table 1, JIS0510X:2004 (p 71). The table was double-checked by komatsu.
+  static final byte[] POSITION_ADJUSTMENT_PATTERN_COORDINATE_TABLE = {
+      -1, -1, -1, -1,  -1,  -1,  -1,  // Version 1
+       6, 18, -1, -1,  -1,  -1,  -1,  // Version 2
+       6, 22, -1, -1,  -1,  -1,  -1,  // Version 3
+       6, 26, -1, -1,  -1,  -1,  -1,  // Version 4
+       6, 30, -1, -1,  -1,  -1,  -1,  // Version 5
+       6, 34, -1, -1,  -1,  -1,  -1,  // Version 6
+       6, 22, 38, -1,  -1,  -1,  -1,  // Version 7
+       6, 24, 42, -1,  -1,  -1,  -1,  // Version 8
+       6, 26, 46, -1,  -1,  -1,  -1,  // Version 9
+       6, 28, 50, -1,  -1,  -1,  -1,  // Version 10
+       6, 30, 54, -1,  -1,  -1,  -1,  // Version 11
+       6, 32, 58, -1,  -1,  -1,  -1,  // Version 12
+       6, 34, 62, -1,  -1,  -1,  -1,  // Version 13
+       6, 26, 46, 66,  -1,  -1,  -1,  // Version 14
+       6, 26, 48, 70,  -1,  -1,  -1,  // Version 15
+       6, 26, 50, 74,  -1,  -1,  -1,  // Version 16
+       6, 30, 54, 78,  -1,  -1,  -1,  // Version 17
+       6, 30, 56, 82,  -1,  -1,  -1,  // Version 18
+       6, 30, 58, 86,  -1,  -1,  -1,  // Version 19
+       6, 34, 62, 90,  -1,  -1,  -1,  // Version 20
+       6, 28, 50, 72,  94,  -1,  -1,  // Version 21
+       6, 26, 50, 74,  98,  -1,  -1,  // Version 22
+       6, 30, 54, 78, 102,  -1,  -1,  // Version 23
+       6, 28, 54, 80, 106,  -1,  -1,  // Version 24
+       6, 32, 58, 84, 110,  -1,  -1,  // Version 25
+       6, 30, 58, 86, 114,  -1,  -1,  // Version 26
+       6, 34, 62, 90, 118,  -1,  -1,  // Version 27
+       6, 26, 50, 74,  98, 122,  -1,  // Version 28
+       6, 30, 54, 78, 102, 126,  -1,  // Version 29
+       6, 26, 52, 78, 104, (byte) 130,  -1,  // Version 30
+       6, 30, 56, 82, 108, (byte) 134,  -1,  // Version 31
+       6, 34, 60, 86, 112, (byte) 138,  -1,  // Version 32
+       6, 30, 58, 86, 114, (byte) 142,  -1,  // Version 33
+       6, 34, 62, 90, 118, (byte) 146,  -1,  // Version 34
+       6, 30, 54, 78, 102, 126, (byte) 150,  // Version 35
+       6, 24, 50, 76, 102, (byte) 128, (byte) 154,  // Version 36
+       6, 28, 54, 80, 106, (byte) 132, (byte) 158,  // Version 37
+       6, 32, 58, 84, 110, (byte) 136, (byte) 162,  // Version 38
+       6, 26, 54, 82, 110, (byte) 138, (byte) 166,  // Version 39
+       6, 30, 58, 86, 114, (byte) 142, (byte) 170,  // Version 40
+  };
+
   private Encoder() {
   }
 
   // The mask penalty calculation is complicated.  See Table 21 of JISX0510:2004 (p.45) for details.
   // Basically it applies four rules and summate all penalties.
   private static int calculateMaskPenalty(ByteMatrix matrix) {
-    return MaskUtil.applyMaskPenaltyRule1(matrix)
-        + MaskUtil.applyMaskPenaltyRule2(matrix)
-        + MaskUtil.applyMaskPenaltyRule3(matrix)
-        + MaskUtil.applyMaskPenaltyRule4(matrix);
+    // Mike-CHANGED: inlined applyMaskPenaltyRule1
+    return MaskUtil.applyMaskPenaltyRule1Internal(matrix, true) +
+        MaskUtil.applyMaskPenaltyRule1Internal(matrix, false) +
+        MaskUtil.applyMaskPenaltyRule2(matrix) +
+        MaskUtil.applyMaskPenaltyRule3(matrix) +
+        MaskUtil.applyMaskPenaltyRule4(matrix);
   }
 
   /**
@@ -100,22 +149,25 @@ public final class Encoder {
       mode = Mode.BYTE;
 
       Charset priorityEncoding = encoding.equals(DEFAULT_BYTE_MODE_ENCODING) ? null : encoding;
-      MinimalEncoder.ResultList rn = MinimalEncoder.encode(content, priorityEncoding, hasGS1FormatHint, ecLevel);
+      // Mike-CHANGED: getting version to int[], inlined ResultList class
+      int[] tmpVersion = new int[1];
+      MinimalEncoder me = new MinimalEncoder(content, priorityEncoding, hasGS1FormatHint, ecLevel);
+      List<MinimalEncoder.ResultNode> rn = me.encode(tmpVersion);
 
       headerAndDataBits = new BitArray();
-      rn.getBits(headerAndDataBits);
-      version = rn.version;
+      version = tmpVersion[0];
+      me.getBits(rn, headerAndDataBits, version);
 
     } else {
-    
+
       // Pick an encoding mode appropriate for the content. Note that this will not attempt to use
       // multiple modes / segments even if that were more efficient.
       mode = chooseMode(content, encoding);
-  
+
       // This will store the header information, like mode and
       // length, as well as "header" segments like an ECI segment.
       BitArray headerBits = new BitArray();
-  
+
       // Append ECI segment if applicable
       if (mode == Mode.BYTE && hasEncodingHint) {
         CharacterSetECI eci = CharacterSetECI.getCharacterSetECI(encoding);
@@ -123,21 +175,22 @@ public final class Encoder {
           appendECI(eci, headerBits);
         }
       }
-  
+
       // Append the FNC1 mode header for GS1 formatted data if applicable
       if (hasGS1FormatHint) {
         // GS1 formatted codes are prefixed with a FNC1 in first position mode header
         appendModeInfo(Mode.FNC1_FIRST_POSITION, headerBits);
       }
-    
+
       // (With ECI in place,) Write the mode marker
       appendModeInfo(mode, headerBits);
-  
+
       // Collect data within the main segment, separately, to count its size if needed. Don't add it to
       // main payload yet.
       BitArray dataBits = new BitArray();
-      appendBytes(content, mode, dataBits, encoding);
-  
+      // Mike-CHANGED: passing range
+      appendBytes(content, 0, content.length(), mode, dataBits, encoding);
+
       if (hints != null && hints.containsKey(EncodeHintType.QR_VERSION)) {
         version = Integer.parseInt(hints.get(EncodeHintType.QR_VERSION).toString());
         int bitsNeeded = calculateBitsNeeded(mode, headerBits, dataBits, version);
@@ -147,7 +200,7 @@ public final class Encoder {
       } else {
         version = recommendVersion(ecLevel, mode, headerBits, dataBits);
       }
-    
+
       headerAndDataBits = new BitArray();
       headerAndDataBits.appendBitArray(headerBits);
       // Find "length" of main segment and write it
@@ -226,15 +279,13 @@ public final class Encoder {
     return -1;
   }
 
-  public static Mode chooseMode(String content) {
-    return chooseMode(content, null);
-  }
+  // Mike-REMOVED: chooseMode
 
   /**
    * Choose the best mode by examining the content. Note that 'encoding' is used as a hint;
    * if it is Shift_JIS, and the input is only double-byte Kanji, then we return {@link Mode#KANJI}.
    */
-  private static Mode chooseMode(String content, Charset encoding) {
+  static Mode chooseMode(String content, Charset encoding) { // Mike-CHANGED: unprivated
     if (SHIFT_JIS_CHARSET.equals(encoding) && isOnlyDoubleByteKanji(content)) {
       // Choose Kanji mode if all input are double-byte characters
       return Mode.KANJI;
@@ -355,12 +406,8 @@ public final class Encoder {
    * the result in "numDataBytesInBlock", and "numECBytesInBlock". See table 12 in 8.5.1 of
    * JISX0510:2004 (p.30)
    */
-  static void getNumDataBytesAndNumECBytesForBlockID(int numTotalBytes,
-                                                     int numDataBytes,
-                                                     int numRSBlocks,
-                                                     int blockID,
-                                                     int[] numDataBytesInBlock,
-                                                     int[] numECBytesInBlock) throws WriterException {
+  static long getNumDataBytesAndNumECBytesForBlockID( // Mike-CHANGED return long instead of accepting two int[1]s
+      int numTotalBytes, int numDataBytes, int numRSBlocks, int blockID) throws WriterException {
     if (blockID >= numRSBlocks) {
       throw new WriterException("Block ID too large");
     }
@@ -398,13 +445,9 @@ public final class Encoder {
       throw new WriterException("Total bytes mismatch");
     }
 
-    if (blockID < numRsBlocksInGroup1) {
-      numDataBytesInBlock[0] = numDataBytesInGroup1;
-      numECBytesInBlock[0] = numEcBytesInGroup1;
-    } else {
-      numDataBytesInBlock[0] = numDataBytesInGroup2;
-      numECBytesInBlock[0] = numEcBytesInGroup2;
-    }
+    return blockID < numRsBlocksInGroup1 // Mike-CHANGED return instead of assignment to array parameters
+        ? (((long) numDataBytesInGroup1) << 32) | (numEcBytesInGroup1 & 0xFFFFFFFFL)
+        : (((long) numDataBytesInGroup2) << 32) | (numEcBytesInGroup2 & 0xFFFFFFFFL);
   }
 
   /**
@@ -428,24 +471,24 @@ public final class Encoder {
     int maxNumEcBytes = 0;
 
     // Since, we know the number of reedsolmon blocks, we can initialize the vector with the number.
-    Collection<BlockPair> blocks = new ArrayList<>(numRSBlocks);
+    // Mike-CHANGED using pre-sized byte[][] instead of ArrayList<struct<byte[], byte[]>>
+    byte[][] blocks = new byte[2 * numRSBlocks][];
 
     for (int i = 0; i < numRSBlocks; ++i) {
-      int[] numDataBytesInBlock = new int[1];
-      int[] numEcBytesInBlock = new int[1];
-      getNumDataBytesAndNumECBytesForBlockID(
-          numTotalBytes, numDataBytes, numRSBlocks, i,
-          numDataBytesInBlock, numEcBytesInBlock);
+      long pair = getNumDataBytesAndNumECBytesForBlockID(
+          numTotalBytes, numDataBytes, numRSBlocks, i);
+      int size = (int) (pair >>> 32);
+      int numEcBytesInBlock = (int) pair;
 
-      int size = numDataBytesInBlock[0];
       byte[] dataBytes = new byte[size];
       bits.toBytes(8 * dataBytesOffset, dataBytes, 0, size);
-      byte[] ecBytes = generateECBytes(dataBytes, numEcBytesInBlock[0]);
-      blocks.add(new BlockPair(dataBytes, ecBytes));
+      byte[] ecBytes = generateECBytes(dataBytes, numEcBytesInBlock);
+      blocks[i] = dataBytes;
+      blocks[numRSBlocks + i] = ecBytes;
 
       maxNumDataBytes = Math.max(maxNumDataBytes, size);
       maxNumEcBytes = Math.max(maxNumEcBytes, ecBytes.length);
-      dataBytesOffset += numDataBytesInBlock[0];
+      dataBytesOffset += size;
     }
     if (numDataBytes != dataBytesOffset) {
       throw new WriterException("Data bytes does not match offset");
@@ -454,23 +497,9 @@ public final class Encoder {
     BitArray result = new BitArray();
 
     // First, place data blocks.
-    for (int i = 0; i < maxNumDataBytes; ++i) {
-      for (BlockPair block : blocks) {
-        byte[] dataBytes = block.dataBytes;
-        if (i < dataBytes.length) {
-          result.appendBits(dataBytes[i], 8);
-        }
-      }
-    }
+    append(result, maxNumDataBytes, blocks, 0, numRSBlocks); // Mike-CHANGED: outlined loops
     // Then, place error correction blocks.
-    for (int i = 0; i < maxNumEcBytes; ++i) {
-      for (BlockPair block : blocks) {
-        byte[] ecBytes = block.errorCorrectionBytes;
-        if (i < ecBytes.length) {
-          result.appendBits(ecBytes[i], 8);
-        }
-      }
-    }
+    append(result, maxNumEcBytes, blocks, numRSBlocks, 2 * numRSBlocks);
     if (numTotalBytes != result.getSizeInBytes()) {  // Should be same.
       throw new WriterException("Interleaving error: " + numTotalBytes + " and " +
           result.getSizeInBytes() + " differ.");
@@ -479,13 +508,25 @@ public final class Encoder {
     return result;
   }
 
+  // Mike-ADDED outlined method
+  private static void append(BitArray result, int max, byte[][] blocks, int start, int endEx) { // Mike-ADDED
+    for (int i = 0; i < max; ++i) {
+      for (int j = start; j < endEx; j++) {
+        byte[] bytes = blocks[j];
+        if (i < bytes.length) {
+          result.appendBits(bytes[i], 8);
+        }
+      }
+    }
+  }
+
   static byte[] generateECBytes(byte[] dataBytes, int numEcBytesInBlock) {
     int numDataBytes = dataBytes.length;
     int[] toEncode = new int[numDataBytes + numEcBytesInBlock];
     for (int i = 0; i < numDataBytes; i++) {
       toEncode[i] = dataBytes[i] & 0xFF;
     }
-    new ReedSolomonEncoder(GenericGF.QR_CODE_FIELD_256).encode(toEncode, numEcBytesInBlock);
+    new ReedSolomonEncoder(QR_CODE_FIELD_256).encode(toEncode, numEcBytesInBlock);
 
     byte[] ecBytes = new byte[numEcBytesInBlock];
     for (int i = 0; i < numEcBytesInBlock; i++) {
@@ -516,31 +557,28 @@ public final class Encoder {
   /**
    * Append "bytes" in "mode" mode (encoding) into "bits". On success, store the result in "bits".
    */
-  static void appendBytes(String content,
-                          Mode mode,
-                          BitArray bits,
-                          Charset encoding) throws WriterException {
+  static void appendBytes( // Mike-CHANGED to accept and pass range to avoid .substring()
+      String content, int from, int to, Mode mode, BitArray bits, Charset encoding) throws WriterException {
     switch (mode) {
       case NUMERIC:
-        appendNumericBytes(content, bits);
+        appendNumericBytes(content, bits, from, to);
         break;
       case ALPHANUMERIC:
-        appendAlphanumericBytes(content, bits);
+        appendAlphanumericBytes(content, bits, from, to);
         break;
       case BYTE:
-        append8BitBytes(content, bits, encoding);
+        append8BitBytes(content.substring(from, to), bits, encoding);
         break;
       case KANJI:
-        appendKanjiBytes(content, bits);
+        appendKanjiBytes(content.substring(from, to), bits);
         break;
       default:
         throw new WriterException("Invalid mode: " + mode);
     }
   }
 
-  static void appendNumericBytes(CharSequence content, BitArray bits) {
-    int length = content.length();
-    int i = 0;
+  // Mike-CHANGED to accept and pass range to avoid .substring()
+  static void appendNumericBytes(String content, BitArray bits, int i, int length) {
     while (i < length) {
       int num1 = content.charAt(i) - '0';
       if (i + 2 < length) {
@@ -562,9 +600,8 @@ public final class Encoder {
     }
   }
 
-  static void appendAlphanumericBytes(CharSequence content, BitArray bits) throws WriterException {
-    int length = content.length();
-    int i = 0;
+  // Mike-CHANGED to accept and pass range to avoid .substring()
+  static void appendAlphanumericBytes(String content, BitArray bits, int i, int length) throws WriterException {
     while (i < length) {
       int code1 = getAlphanumericCode(content.charAt(i));
       if (code1 == -1) {
@@ -623,17 +660,6 @@ public final class Encoder {
     bits.appendBits(eci.getValue(), 8);
   }
 
-  // Mike-MOVED here from separate file
-  private static final class BlockPair {
-
-    final byte[] dataBytes;
-    final byte[] errorCorrectionBytes;
-
-    BlockPair(byte[] data, byte[] errorCorrection) {
-      dataBytes = data;
-      errorCorrectionBytes = errorCorrection;
-    }
-
-  }
+  // Mike-REMOVED BlockPair
 
 }

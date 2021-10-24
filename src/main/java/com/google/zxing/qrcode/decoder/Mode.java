@@ -25,19 +25,19 @@ package com.google.zxing.qrcode.decoder;
 public enum Mode {
 
   // Mike-REMOVED TERMINATOR, STRUCTURED_APPEND, FNC1_SECOND_POSITION, HANZI
-  NUMERIC(new int[]{10, 12, 14}, 0x01),
-  ALPHANUMERIC(new int[]{9, 11, 13}, 0x02),
-  BYTE(new int[]{8, 16, 16}, 0x04),
-  ECI(new int[]{0, 0, 0}, 0x07), // character counts don't apply
-  KANJI(new int[]{8, 10, 12}, 0x08),
-  FNC1_FIRST_POSITION(new int[]{0, 0, 0}, 0x05);
+  // Mike-REORDERED for MinimalEncoder
+  KANJI(8, 10, 12, 0x08),
+  ALPHANUMERIC(9, 11, 13, 0x02),
+  NUMERIC(10, 12, 14, 0x01),
+  BYTE(8, 16, 16, 0x04),
+  ECI(0, 0, 0, 0x07), // character counts don't apply
+  FNC1_FIRST_POSITION(0, 0, 0, 0x05);
 
-  private final int[] characterCountBitsForVersions;
-  private final int bits;
+  // Mike-CHANGED to hold a single int
+  private final int data;
 
-  Mode(int[] characterCountBitsForVersions, int bits) {
-    this.characterCountBitsForVersions = characterCountBitsForVersions;
-    this.bits = bits;
+  Mode(int small, int medium, int large, int bits) {
+    this.data = (small << 24) | (medium << 16) | (large << 8) | bits;
   }
 
   // Mike-REMOVED forBits
@@ -47,20 +47,19 @@ public enum Mode {
    * @return number of bits used, in this QR Code symbol {@link Version}, to encode the
    *         count of characters that will follow encoded in this Mode
    */
-  public int getCharacterCountBits(int number) {
-    int offset;
-    if (number <= 9) {
-      offset = 0;
-    } else if (number <= 26) {
-      offset = 1;
+  public int getCharacterCountBits(int version) {
+    if (version <= 9) {
+      return data >>> 24;
+    } else if (version <= 26) {
+      return (data >>> 16) & 0xFF;
     } else {
-      offset = 2;
+      return (data >>> 8) & 0xFF;
     }
-    return characterCountBitsForVersions[offset];
   }
 
   public int getBits() {
-    return bits;
+    return data & 0xFF;
   }
+  // END Mike-CHANGED
 
 }

@@ -70,8 +70,8 @@ public final class QRCodeWriter { // Mike-CHANGED: moved to test/, unimplemented
     if (input == null) {
       throw new IllegalStateException();
     }
-    int inputWidth = input.getWidth();
-    int inputHeight = input.getHeight();
+    int inputWidth = input.width; // Mike-CHANGED to direct field access
+    int inputHeight = input.height;
     int qrWidth = inputWidth + (quietZone * 2);
     int qrHeight = inputHeight + (quietZone * 2);
     int outputWidth = Math.max(width, qrWidth);

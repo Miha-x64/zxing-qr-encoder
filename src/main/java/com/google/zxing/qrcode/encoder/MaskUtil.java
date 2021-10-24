@@ -33,13 +33,7 @@ final class MaskUtil {
     // do nothing
   }
 
-  /**
-   * Apply mask penalty rule 1 and return the penalty. Find repetitive cells with the same color and
-   * give penalty to them. Example: 00000 or 11111.
-   */
-  static int applyMaskPenaltyRule1(ByteMatrix matrix) {
-    return applyMaskPenaltyRule1Internal(matrix, true) + applyMaskPenaltyRule1Internal(matrix, false);
-  }
+  // Mike-REMOVED applyMaskPenaltyRule1
 
   /**
    * Apply mask penalty rule 2 and return the penalty. Find 2x2 blocks with the same color and give
@@ -48,14 +42,12 @@ final class MaskUtil {
    */
   static int applyMaskPenaltyRule2(ByteMatrix matrix) {
     int penalty = 0;
-    byte[][] array = matrix.getArray();
-    int width = matrix.getWidth();
-    int height = matrix.getHeight();
+    int width = matrix.width; // Mike-CHANGED: direct w/h field access; matrix.get() accessor
+    int height = matrix.height;
     for (int y = 0; y < height - 1; y++) {
-      byte[] arrayY = array[y];
       for (int x = 0; x < width - 1; x++) {
-        int value = arrayY[x];
-        if (value == arrayY[x + 1] && value == array[y + 1][x] && value == array[y + 1][x + 1]) {
+        int value = matrix.get(x, y);
+        if (value == matrix.get(x + 1, y) && value == matrix.get(x, y + 1) && value == matrix.get(x + 1, y + 1)) {
           penalty++;
         }
       }
@@ -70,32 +62,30 @@ final class MaskUtil {
    */
   static int applyMaskPenaltyRule3(ByteMatrix matrix) {
     int numPenalties = 0;
-    byte[][] array = matrix.getArray();
-    int width = matrix.getWidth();
-    int height = matrix.getHeight();
+    int width = matrix.width; // Mike-CHANGED: direct w/h field access; matrix.get() accessor
+    int height = matrix.height;
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        byte[] arrayY = array[y];  // We can at least optimize this access
         if (x + 6 < width &&
-            arrayY[x] == 1 &&
-            arrayY[x + 1] == 0 &&
-            arrayY[x + 2] == 1 &&
-            arrayY[x + 3] == 1 &&
-            arrayY[x + 4] == 1 &&
-            arrayY[x + 5] == 0 &&
-            arrayY[x + 6] == 1 &&
-            (isWhiteHorizontal(arrayY, x - 4, x) || isWhiteHorizontal(arrayY, x + 7, x + 11))) {
+            matrix.get(x, y) == 1 &&
+            matrix.get(x + 1, y) == 0 &&
+            matrix.get(x + 2, y) == 1 &&
+            matrix.get(x + 3, y) == 1 &&
+            matrix.get(x + 4, y) == 1 &&
+            matrix.get(x + 5, y) == 0 &&
+            matrix.get(x + 6, y) == 1 &&
+            (isWhiteHorizontal(matrix, y, x - 4, x) || isWhiteHorizontal(matrix, y, x + 7, x + 11))) {
           numPenalties++;
         }
         if (y + 6 < height &&
-            array[y][x] == 1 &&
-            array[y + 1][x] == 0 &&
-            array[y + 2][x] == 1 &&
-            array[y + 3][x] == 1 &&
-            array[y + 4][x] == 1 &&
-            array[y + 5][x] == 0 &&
-            array[y + 6][x] == 1 &&
-            (isWhiteVertical(array, x, y - 4, y) || isWhiteVertical(array, x, y + 7, y + 11))) {
+            matrix.get(x, y) == 1 &&
+            matrix.get(x, y + 1) == 0 &&
+            matrix.get(x, y + 2) == 1 &&
+            matrix.get(x, y + 3) == 1 &&
+            matrix.get(x, y + 4) == 1 &&
+            matrix.get(x, y + 5) == 0 &&
+            matrix.get(x, y + 6) == 1 &&
+            (isWhiteVertical(matrix, x, y - 4, y) || isWhiteVertical(matrix, x, y + 7, y + 11))) {
           numPenalties++;
         }
       }
@@ -103,24 +93,26 @@ final class MaskUtil {
     return numPenalties * N3;
   }
 
-  private static boolean isWhiteHorizontal(byte[] rowArray, int from, int to) {
-    if (from < 0 || rowArray.length < to) {
+  // Mike-CHANGED: accepting full matrix and using accessors
+  private static boolean isWhiteHorizontal(ByteMatrix matrix, int y, int from, int to) {
+    if (from < 0 || matrix.width < to) {
       return false;
     }
-    for (int i = from; i < to; i++) {
-      if (rowArray[i] == 1) {
+    for (int x = from; x < to; x++) {
+      if (matrix.get(x, y) == 1) {
         return false;
       }
     }
     return true;
   }
 
-  private static boolean isWhiteVertical(byte[][] array, int col, int from, int to) {
-    if (from < 0 || array.length < to) {
+  // Mike-CHANGED: using matrix accessors
+  private static boolean isWhiteVertical(ByteMatrix matrix, int x, int from, int to) {
+    if (from < 0 || matrix.height < to) {
       return false;
     }
-    for (int i = from; i < to; i++) {
-      if (array[i][col] == 1) {
+    for (int y = from; y < to; y++) {
+      if (matrix.get(x, y) == 1) {
         return false;
       }
     }
@@ -133,18 +125,16 @@ final class MaskUtil {
    */
   static int applyMaskPenaltyRule4(ByteMatrix matrix) {
     int numDarkCells = 0;
-    byte[][] array = matrix.getArray();
-    int width = matrix.getWidth();
-    int height = matrix.getHeight();
+    int width = matrix.width;// Mike-CHANGED: direct w/h access and use of get() accessor
+    int height = matrix.height;
     for (int y = 0; y < height; y++) {
-      byte[] arrayY = array[y];
       for (int x = 0; x < width; x++) {
-        if (arrayY[x] == 1) {
+        if (matrix.get(x, y) == 1) {
           numDarkCells++;
         }
       }
     }
-    int numTotalCells = matrix.getHeight() * matrix.getWidth();
+    int numTotalCells = matrix.height * matrix.width;
     int fivePercentVariances = Math.abs(numDarkCells * 2 - numTotalCells) * 10 / numTotalCells;
     return fivePercentVariances * N4;
   }
@@ -194,16 +184,15 @@ final class MaskUtil {
    * Helper function for applyMaskPenaltyRule1. We need this for doing this calculation in both
    * vertical and horizontal orders respectively.
    */
-  private static int applyMaskPenaltyRule1Internal(ByteMatrix matrix, boolean isHorizontal) {
-    int penalty = 0;
-    int iLimit = isHorizontal ? matrix.getHeight() : matrix.getWidth();
-    int jLimit = isHorizontal ? matrix.getWidth() : matrix.getHeight();
-    byte[][] array = matrix.getArray();
+  static int applyMaskPenaltyRule1Internal(ByteMatrix matrix, boolean isHorizontal) {
+    int penalty = 0; // Mike-CHANGED: direct w/h access and use of get() accessor
+    int iLimit = isHorizontal ? matrix.height : matrix.width;
+    int jLimit = isHorizontal ? matrix.width : matrix.height;
     for (int i = 0; i < iLimit; i++) {
       int numSameBitCells = 0;
       int prevBit = -1;
       for (int j = 0; j < jLimit; j++) {
-        int bit = isHorizontal ? array[i][j] : array[j][i];
+        int bit = isHorizontal ? matrix.get(j, i) : matrix.get(i, j);
         if (bit == prevBit) {
           numSameBitCells++;
         } else {

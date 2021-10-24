@@ -26,8 +26,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
-import java.nio.charset.Charset;
 
 /**
  * @author satorux@google.com (Satoru Takabayashi) - creator
@@ -67,29 +67,31 @@ public final class EncoderTestCase extends Assert {
   @Test
   public void testChooseMode() {
     // Numeric mode.
-    assertSame(Mode.NUMERIC, Encoder.chooseMode("0"));
-    assertSame(Mode.NUMERIC, Encoder.chooseMode("0123456789"));
+    assertSame(Mode.NUMERIC, Encoder_chooseMode("0"));
+    assertSame(Mode.NUMERIC, Encoder_chooseMode("0123456789"));
     // Alphanumeric mode.
-    assertSame(Mode.ALPHANUMERIC, Encoder.chooseMode("A"));
-    assertSame(Mode.ALPHANUMERIC,
-               Encoder.chooseMode("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"));
+    assertSame(Mode.ALPHANUMERIC, Encoder_chooseMode("A"));
+    assertSame(Mode.ALPHANUMERIC, Encoder_chooseMode("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"));
     // 8-bit byte mode.
-    assertSame(Mode.BYTE, Encoder.chooseMode("a"));
-    assertSame(Mode.BYTE, Encoder.chooseMode("#"));
-    assertSame(Mode.BYTE, Encoder.chooseMode(""));
+    assertSame(Mode.BYTE, Encoder_chooseMode("a"));
+    assertSame(Mode.BYTE, Encoder_chooseMode("#"));
+    assertSame(Mode.BYTE, Encoder_chooseMode(""));
     // Kanji mode.  We used to use MODE_KANJI for these, but we stopped
     // doing that as we cannot distinguish Shift_JIS from other encodings
     // from data bytes alone.  See also comments in qrcode_encoder.h.
 
     // AIUE in Hiragana in Shift_JIS
-    assertSame(Mode.BYTE,
-               Encoder.chooseMode(shiftJISString(bytes(0x8, 0xa, 0x8, 0xa, 0x8, 0xa, 0x8, 0xa6))));
+    assertSame(Mode.BYTE, Encoder_chooseMode(shiftJISString(bytes(0x8, 0xa, 0x8, 0xa, 0x8, 0xa, 0x8, 0xa6))));
 
     // Nihon in Kanji in Shift_JIS.
-    assertSame(Mode.BYTE, Encoder.chooseMode(shiftJISString(bytes(0x9, 0xf, 0x9, 0x7b))));
+    assertSame(Mode.BYTE, Encoder_chooseMode(shiftJISString(bytes(0x9, 0xf, 0x9, 0x7b))));
 
     // Sou-Utsu-Byou in Kanji in Shift_JIS.
-    assertSame(Mode.BYTE, Encoder.chooseMode(shiftJISString(bytes(0xe, 0x4, 0x9, 0x5, 0x9, 0x61))));
+    assertSame(Mode.BYTE, Encoder_chooseMode(shiftJISString(bytes(0xe, 0x4, 0x9, 0x5, 0x9, 0x61))));
+  }
+
+  private static Mode Encoder_chooseMode(String a) {
+    return Encoder.chooseMode(a, null);
   }
 
   @Test
@@ -354,36 +356,38 @@ public final class EncoderTestCase extends Assert {
     assertEquals(" ..X..... ....", bits.toString());  // 12 bits.
   }
 
+  private static void Encoder_appendBytes(String content, Mode mode, BitArray bits) throws WriterException {
+    Encoder.appendBytes(content, 0, content.length(), mode, bits, Encoder.DEFAULT_BYTE_MODE_ENCODING);
+  }
   @Test
   public void testAppendBytes() throws WriterException {
     // Should use appendNumericBytes.
     // 1 = 01 = 0001 in 4 bits.
     BitArray bits = new BitArray();
-    Encoder.appendBytes("1", Mode.NUMERIC, bits, Encoder.DEFAULT_BYTE_MODE_ENCODING);
+    Encoder_appendBytes("1", Mode.NUMERIC, bits);
     assertEquals(" ...X" , bits.toString());
     // Should use appendAlphanumericBytes.
     // A = 10 = 0xa = 001010 in 6 bits
     bits = new BitArray();
-    Encoder.appendBytes("A", Mode.ALPHANUMERIC, bits, Encoder.DEFAULT_BYTE_MODE_ENCODING);
+    Encoder_appendBytes("A", Mode.ALPHANUMERIC, bits);
     assertEquals(" ..X.X." , bits.toString());
     // Lower letters such as 'a' cannot be encoded in MODE_ALPHANUMERIC.
     try {
-      Encoder.appendBytes("a", Mode.ALPHANUMERIC, bits, Encoder.DEFAULT_BYTE_MODE_ENCODING);
+      Encoder_appendBytes("a", Mode.ALPHANUMERIC, bits);
     } catch (WriterException we) {
       // good
     }
     // Should use append8BitBytes.
     // 0x61, 0x62, 0x63
     bits = new BitArray();
-    Encoder.appendBytes("abc", Mode.BYTE, bits, Encoder.DEFAULT_BYTE_MODE_ENCODING);
+    Encoder_appendBytes("abc", Mode.BYTE, bits);
     assertEquals(" .XX....X .XX...X. .XX...XX", bits.toString());
     // Anything can be encoded in QRCode.MODE_8BIT_BYTE.
-    Encoder.appendBytes("\0", Mode.BYTE, bits, Encoder.DEFAULT_BYTE_MODE_ENCODING);
+    Encoder_appendBytes("\0", Mode.BYTE, bits);
     // Should use appendKanjiBytes.
     // 0x93, 0x5f
     bits = new BitArray();
-    Encoder.appendBytes(shiftJISString(bytes(0x93, 0x5f)), Mode.KANJI, bits,
-        Encoder.DEFAULT_BYTE_MODE_ENCODING);
+    Encoder_appendBytes(shiftJISString(bytes(0x93, 0x5f)), Mode.KANJI, bits);
     assertEquals(" .XX.XX.. XXXXX", bits.toString());
   }
 
@@ -418,39 +422,29 @@ public final class EncoderTestCase extends Assert {
 
   @Test
   public void testGetNumDataBytesAndNumECBytesForBlockID() throws WriterException {
-    int[] numDataBytes = new int[1];
-    int[] numEcBytes = new int[1];
     // Version 1-H.
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(26, 9, 1, 0, numDataBytes, numEcBytes);
-    assertEquals(9, numDataBytes[0]);
-    assertEquals(17, numEcBytes[0]);
+    long dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(26, 9, 1, 0);
+    assertEquals(9L << 32 | 17 , dataAndEcBytesCount);
 
     // Version 3-H.  2 blocks.
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(70, 26, 2, 0, numDataBytes, numEcBytes);
-    assertEquals(13, numDataBytes[0]);
-    assertEquals(22, numEcBytes[0]);
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(70, 26, 2, 1, numDataBytes, numEcBytes);
-    assertEquals(13, numDataBytes[0]);
-    assertEquals(22, numEcBytes[0]);
+    dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(70, 26, 2, 0);
+    assertEquals(13L << 32 | 22, dataAndEcBytesCount);
+    dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(70, 26, 2, 1);
+    assertEquals(13L << 32 | 22, dataAndEcBytesCount);
 
     // Version 7-H. (4 + 1) blocks.
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(196, 66, 5, 0, numDataBytes, numEcBytes);
-    assertEquals(13, numDataBytes[0]);
-    assertEquals(26, numEcBytes[0]);
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(196, 66, 5, 4, numDataBytes, numEcBytes);
-    assertEquals(14, numDataBytes[0]);
-    assertEquals(26, numEcBytes[0]);
+    dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(196, 66, 5, 0);
+    assertEquals(13L << 32 | 26, dataAndEcBytesCount);
+    dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(196, 66, 5, 4);
+    assertEquals(14L << 32 | 26, dataAndEcBytesCount);
 
     // Version 40-H. (20 + 61) blocks.
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(3706, 1276, 81, 0, numDataBytes, numEcBytes);
-    assertEquals(15, numDataBytes[0]);
-    assertEquals(30, numEcBytes[0]);
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(3706, 1276, 81, 20, numDataBytes, numEcBytes);
-    assertEquals(16, numDataBytes[0]);
-    assertEquals(30, numEcBytes[0]);
-    Encoder.getNumDataBytesAndNumECBytesForBlockID(3706, 1276, 81, 80, numDataBytes, numEcBytes);
-    assertEquals(16, numDataBytes[0]);
-    assertEquals(30, numEcBytes[0]);
+    dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(3706, 1276, 81, 0);
+    assertEquals(15L << 32 | 30, dataAndEcBytesCount);
+    dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(3706, 1276, 81, 20);
+    assertEquals(16L << 32 | 30, dataAndEcBytesCount);
+    dataAndEcBytesCount = Encoder.getNumDataBytesAndNumECBytesForBlockID(3706, 1276, 81, 80);
+    assertEquals(16L << 32 | 30, dataAndEcBytesCount);
   }
 
   @Test
@@ -527,23 +521,23 @@ public final class EncoderTestCase extends Assert {
   public void testAppendNumericBytes() {
     // 1 = 01 = 0001 in 4 bits.
     BitArray bits = new BitArray();
-    Encoder.appendNumericBytes("1", bits);
+    Encoder.appendNumericBytes("1", bits, 0, 1);
     assertEquals(" ...X" , bits.toString());
     // 12 = 0xc = 0001100 in 7 bits.
     bits = new BitArray();
-    Encoder.appendNumericBytes("12", bits);
+    Encoder.appendNumericBytes("12", bits, 0, 2);
     assertEquals(" ...XX.." , bits.toString());
     // 123 = 0x7b = 0001111011 in 10 bits.
     bits = new BitArray();
-    Encoder.appendNumericBytes("123", bits);
+    Encoder.appendNumericBytes("123", bits, 0, 3);
     assertEquals(" ...XXXX. XX" , bits.toString());
     // 1234 = "123" + "4" = 0001111011 + 0100
     bits = new BitArray();
-    Encoder.appendNumericBytes("1234", bits);
+    Encoder.appendNumericBytes("1234", bits, 0, 4);
     assertEquals(" ...XXXX. XX.X.." , bits.toString());
     // Empty.
     bits = new BitArray();
-    Encoder.appendNumericBytes("", bits);
+    Encoder.appendNumericBytes("", bits, 0, 0);
     assertEquals("" , bits.toString());
   }
 
@@ -551,23 +545,23 @@ public final class EncoderTestCase extends Assert {
   public void testAppendAlphanumericBytes() throws WriterException {
     // A = 10 = 0xa = 001010 in 6 bits
     BitArray bits = new BitArray();
-    Encoder.appendAlphanumericBytes("A", bits);
+    Encoder.appendAlphanumericBytes("A", bits, 0, 1);
     assertEquals(" ..X.X." , bits.toString());
     // AB = 10 * 45 + 11 = 461 = 0x1cd = 00111001101 in 11 bits
     bits = new BitArray();
-    Encoder.appendAlphanumericBytes("AB", bits);
+    Encoder.appendAlphanumericBytes("AB", bits, 0, 2);
     assertEquals(" ..XXX..X X.X", bits.toString());
     // ABC = "AB" + "C" = 00111001101 + 001100
     bits = new BitArray();
-    Encoder.appendAlphanumericBytes("ABC", bits);
+    Encoder.appendAlphanumericBytes("ABC", bits, 0, 3);
     assertEquals(" ..XXX..X X.X..XX. ." , bits.toString());
     // Empty.
     bits = new BitArray();
-    Encoder.appendAlphanumericBytes("", bits);
+    Encoder.appendAlphanumericBytes("", bits, 0, 0);
     assertEquals("" , bits.toString());
     // Invalid data.
     try {
-      Encoder.appendAlphanumericBytes("abc", new BitArray());
+      Encoder.appendAlphanumericBytes("abc", new BitArray(), 0, 3);
     } catch (WriterException we) {
       // good
     }
@@ -668,230 +662,225 @@ public final class EncoderTestCase extends Assert {
 
   @Test
   public void testMinimalEncoder1() throws Exception {
-    verifyMinimalEncoding("A", "ALPHANUMERIC(A)", null, false);
+    verifyMinimalEncoding("A", "ALPHANUMERIC(A)", false);
   }
 
   @Test
   public void testMinimalEncoder2() throws Exception {
-    verifyMinimalEncoding("AB", "ALPHANUMERIC(AB)", null, false);
+    verifyMinimalEncoding("AB", "ALPHANUMERIC(AB)", false);
   }
 
   @Test
   public void testMinimalEncoder3() throws Exception {
-    verifyMinimalEncoding("ABC", "ALPHANUMERIC(ABC)", null, false);
+    verifyMinimalEncoding("ABC", "ALPHANUMERIC(ABC)", false);
   }
 
   @Test
   public void testMinimalEncoder4() throws Exception {
-    verifyMinimalEncoding("ABCD", "ALPHANUMERIC(ABCD)", null, false);
+    verifyMinimalEncoding("ABCD", "ALPHANUMERIC(ABCD)", false);
   }
 
   @Test
   public void testMinimalEncoder5() throws Exception {
-    verifyMinimalEncoding("ABCDE", "ALPHANUMERIC(ABCDE)", null, false);
+    verifyMinimalEncoding("ABCDE", "ALPHANUMERIC(ABCDE)", false);
   }
 
   @Test
   public void testMinimalEncoder6() throws Exception {
-    verifyMinimalEncoding("ABCDEF", "ALPHANUMERIC(ABCDEF)", null, false);
+    verifyMinimalEncoding("ABCDEF", "ALPHANUMERIC(ABCDEF)", false);
   }
 
   @Test
   public void testMinimalEncoder7() throws Exception {
-    verifyMinimalEncoding("ABCDEFG", "ALPHANUMERIC(ABCDEFG)", null, false);
+    verifyMinimalEncoding("ABCDEFG", "ALPHANUMERIC(ABCDEFG)", false);
   }
 
   @Test
   public void testMinimalEncoder8() throws Exception {
-    verifyMinimalEncoding("1", "NUMERIC(1)", null, false);
+    verifyMinimalEncoding("1", "NUMERIC(1)", false);
   }
 
   @Test
   public void testMinimalEncoder9() throws Exception {
-    verifyMinimalEncoding("12", "NUMERIC(12)", null, false);
+    verifyMinimalEncoding("12", "NUMERIC(12)", false);
   }
 
   @Test
   public void testMinimalEncoder10() throws Exception {
-    verifyMinimalEncoding("123", "NUMERIC(123)", null, false);
+    verifyMinimalEncoding("123", "NUMERIC(123)", false);
   }
 
   @Test
   public void testMinimalEncoder11() throws Exception {
-    verifyMinimalEncoding("1234", "NUMERIC(1234)", null, false);
+    verifyMinimalEncoding("1234", "NUMERIC(1234)", false);
   }
 
   @Test
   public void testMinimalEncoder12() throws Exception {
-    verifyMinimalEncoding("12345", "NUMERIC(12345)", null, false);
+    verifyMinimalEncoding("12345", "NUMERIC(12345)", false);
   }
 
   @Test
   public void testMinimalEncoder13() throws Exception {
-    verifyMinimalEncoding("123456", "NUMERIC(123456)", null, false);
+    verifyMinimalEncoding("123456", "NUMERIC(123456)", false);
   }
 
   @Test
   public void testMinimalEncoder14() throws Exception {
-    verifyMinimalEncoding("123A", "ALPHANUMERIC(123A)", null, false);
+    verifyMinimalEncoding("123A", "ALPHANUMERIC(123A)", false);
   }
 
   @Test
   public void testMinimalEncoder15() throws Exception {
-    verifyMinimalEncoding("A1", "ALPHANUMERIC(A1)", null, false);
+    verifyMinimalEncoding("A1", "ALPHANUMERIC(A1)", false);
   }
 
   @Test
   public void testMinimalEncoder16() throws Exception {
-    verifyMinimalEncoding("A12", "ALPHANUMERIC(A12)", null, false);
+    verifyMinimalEncoding("A12", "ALPHANUMERIC(A12)", false);
   }
 
   @Test
   public void testMinimalEncoder17() throws Exception {
-    verifyMinimalEncoding("A123", "ALPHANUMERIC(A123)", null, false);
+    verifyMinimalEncoding("A123", "ALPHANUMERIC(A123)", false);
   }
 
   @Test
   public void testMinimalEncoder18() throws Exception {
-    verifyMinimalEncoding("A1234", "ALPHANUMERIC(A1234)", null, false);
+    verifyMinimalEncoding("A1234", "ALPHANUMERIC(A1234)", false);
   }
 
   @Test
   public void testMinimalEncoder19() throws Exception {
-    verifyMinimalEncoding("A12345", "ALPHANUMERIC(A12345)", null, false);
+    verifyMinimalEncoding("A12345", "ALPHANUMERIC(A12345)", false);
   }
 
   @Test
   public void testMinimalEncoder20() throws Exception {
-    verifyMinimalEncoding("A123456", "ALPHANUMERIC(A123456)", null, false);
+    verifyMinimalEncoding("A123456", "ALPHANUMERIC(A123456)", false);
   }
 
   @Test
   public void testMinimalEncoder21() throws Exception {
-    verifyMinimalEncoding("A1234567", "ALPHANUMERIC(A1234567)", null, false);
+    verifyMinimalEncoding("A1234567", "ALPHANUMERIC(A1234567)", false);
   }
 
   @Test
   public void testMinimalEncoder22() throws Exception {
-    verifyMinimalEncoding("A12345678", "BYTE(A),NUMERIC(12345678)", null, false);
+    verifyMinimalEncoding("A12345678", "BYTE(A),NUMERIC(12345678)", false);
   }
 
   @Test
   public void testMinimalEncoder23() throws Exception {
-    verifyMinimalEncoding("A123456789", "BYTE(A),NUMERIC(123456789)", null, false);
+    verifyMinimalEncoding("A123456789", "BYTE(A),NUMERIC(123456789)", false);
   }
 
   @Test
   public void testMinimalEncoder24() throws Exception {
-    verifyMinimalEncoding("A1234567890", "ALPHANUMERIC(A1),NUMERIC(234567890)", null, false);
+    verifyMinimalEncoding("A1234567890", "ALPHANUMERIC(A1),NUMERIC(234567890)", false);
   }
 
   @Test
   public void testMinimalEncoder25() throws Exception {
-    verifyMinimalEncoding("AB1", "ALPHANUMERIC(AB1)", null, false);
+    verifyMinimalEncoding("AB1", "ALPHANUMERIC(AB1)", false);
   }
 
   @Test
   public void testMinimalEncoder26() throws Exception {
-    verifyMinimalEncoding("AB12", "ALPHANUMERIC(AB12)", null, false);
+    verifyMinimalEncoding("AB12", "ALPHANUMERIC(AB12)", false);
   }
 
   @Test
   public void testMinimalEncoder27() throws Exception {
-    verifyMinimalEncoding("AB123", "ALPHANUMERIC(AB123)", null, false);
+    verifyMinimalEncoding("AB123", "ALPHANUMERIC(AB123)", false);
   }
 
   @Test
   public void testMinimalEncoder28() throws Exception {
-    verifyMinimalEncoding("AB1234", "ALPHANUMERIC(AB1234)", null, false);
+    verifyMinimalEncoding("AB1234", "ALPHANUMERIC(AB1234)", false);
   }
 
   @Test
   public void testMinimalEncoder29() throws Exception {
-    verifyMinimalEncoding("ABC1", "ALPHANUMERIC(ABC1)", null, false);
+    verifyMinimalEncoding("ABC1", "ALPHANUMERIC(ABC1)", false);
   }
 
   @Test
   public void testMinimalEncoder30() throws Exception {
-    verifyMinimalEncoding("ABC12", "ALPHANUMERIC(ABC12)", null, false);
+    verifyMinimalEncoding("ABC12", "ALPHANUMERIC(ABC12)", false);
   }
 
   @Test
   public void testMinimalEncoder31() throws Exception {
-    verifyMinimalEncoding("ABC1234", "ALPHANUMERIC(ABC1234)", null, false);
+    verifyMinimalEncoding("ABC1234", "ALPHANUMERIC(ABC1234)", false);
   }
 
   @Test
   public void testMinimalEncoder32() throws Exception {
-    verifyMinimalEncoding("http://foo.com", "BYTE(http://foo.com)" +
-        "", null, false);
+    verifyMinimalEncoding("http://foo.com", "BYTE(http://foo.com)", false);
   }
 
   @Test
   public void testMinimalEncoder33() throws Exception {
-    verifyMinimalEncoding("HTTP://FOO.COM", "ALPHANUMERIC(HTTP://FOO.COM" +
-        ")", null, false);
+    verifyMinimalEncoding("HTTP://FOO.COM", "ALPHANUMERIC(HTTP://FOO.COM)", false);
   }
 
   @Test
   public void testMinimalEncoder34() throws Exception {
-    verifyMinimalEncoding("1001114670010%01201220%107211220%140045003267781", 
-        "NUMERIC(1001114670010),ALPHANUMERIC(%01201220%107211220%),NUMERIC(140045003267781)", null, false);
+    verifyMinimalEncoding("1001114670010%01201220%107211220%140045003267781",
+        "NUMERIC(1001114670010),ALPHANUMERIC(%01201220%107211220%),NUMERIC(140045003267781)", false);
   }
 
   @Test
   public void testMinimalEncoder35() throws Exception {
-    verifyMinimalEncoding("\u0150", "ECI(ISO-8859-2),BYTE(.)", null, false);
+    verifyMinimalEncoding("\u0150", "ECI(ISO-8859-2),BYTE(.)", false);
   }
 
   @Test
   public void testMinimalEncoder36() throws Exception {
-    verifyMinimalEncoding("\u015C", "ECI(ISO-8859-3),BYTE(.)", null, false);
+    verifyMinimalEncoding("\u015C", "ECI(ISO-8859-3),BYTE(.)", false);
   }
 
   @Test
   public void testMinimalEncoder37() throws Exception {
-    verifyMinimalEncoding("\u0150\u015C", "ECI(UTF-8),BYTE(..)", null, false);
+    verifyMinimalEncoding("\u0150\u015C", "ECI(UTF-8),BYTE(..)", false);
   }
 
   @Test
   public void testMinimalEncoder38() throws Exception {
-    verifyMinimalEncoding("\u0150\u0150\u015C\u015C", "ECI(ISO-8859-2),BYTE(." +
-        ".),ECI(ISO-8859-3),BYTE(..)", null, false);
+    verifyMinimalEncoding("\u0150\u0150\u015C\u015C", "ECI(ISO-8859-2),BYTE(..),ECI(ISO-8859-3),BYTE(..)", false);
   }
 
   @Test
   public void testMinimalEncoder39() throws Exception {
-    verifyMinimalEncoding("abcdef\u0150ghij", "ECI(ISO-8859-2),BYTE(abcde" +
-        "f.ghij)", null, false);
+    verifyMinimalEncoding("abcdef\u0150ghij", "ECI(ISO-8859-2),BYTE(abcdef.ghij)", false);
   }
 
   @Test
   public void testMinimalEncoder40() throws Exception {
-    verifyMinimalEncoding("2938928329832983\u01502938928329832983\u015C2938928329832983", 
+    verifyMinimalEncoding("2938928329832983\u01502938928329832983\u015C2938928329832983",
         "NUMERIC(2938928329832983),ECI(ISO-8859-2),BYTE(.),NUMERIC(2938928329832983),ECI(ISO-8" +
-        "859-3),BYTE(.),NUMERIC(2938928329832983)", null, false);
+        "859-3),BYTE(.),NUMERIC(2938928329832983)", false);
   }
 
   @Test
   public void testMinimalEncoder41() throws Exception {
     verifyMinimalEncoding("1001114670010%01201220%107211220%140045003267781", "FNC1_FIRST_POSITION(),NUMERIC(100111" +
-        "4670010),ALPHANUMERIC(%01201220%107211220%),NUMERIC(140045003267781)", null, 
+        "4670010),ALPHANUMERIC(%01201220%107211220%),NUMERIC(140045003267781)",
         true);
   }
 
   @Test
   public void testMinimalEncoder42() throws Exception {
     // test halfwidth Katakana character (they are single byte encoded in Shift_JIS)
-    verifyMinimalEncoding("Katakana:\uFF66\uFF66\uFF66\uFF66\uFF66\uFF66", "ECI(Shift_JIS),BYTE(Katakana:......)", null
-        , false);
+    verifyMinimalEncoding("Katakana:\uFF66\uFF66\uFF66\uFF66\uFF66\uFF66", "ECI(Shift_JIS),BYTE(Katakana:......)",
+        false);
   }
 
   @Test
   public void testMinimalEncoder43() throws Exception {
     // The character \u30A2 encodes as double byte in Shift_JIS so KANJI is more compact in this case
-    verifyMinimalEncoding("Katakana:\u30A2\u30A2\u30A2\u30A2\u30A2\u30A2", "BYTE(Katakana:),KANJI(......)", null,
-        false);
+    verifyMinimalEncoding("Katakana:\u30A2\u30A2\u30A2\u30A2\u30A2\u30A2", "BYTE(Katakana:),KANJI(......)", false);
   }
 
   @Test
@@ -899,15 +888,16 @@ public final class EncoderTestCase extends Assert {
     // The character \u30A2 encodes as double byte in Shift_JIS but KANJI is not more compact in this case because
     // KANJI is only more compact when it encodes pairs of characters. In the case of mixed text it can however be
     // that Shift_JIS encoding is more compact as in this example
-    verifyMinimalEncoding("Katakana:\u30A2a\u30A2a\u30A2a\u30A2a\u30A2a\u30A2", "ECI(Shift_JIS),BYTE(Katakana:.a.a.a" +
-        ".a.a.)", null, false);
+    verifyMinimalEncoding("Katakana:\u30A2a\u30A2a\u30A2a\u30A2a\u30A2a\u30A2",
+        "ECI(Shift_JIS),BYTE(Katakana:.a.a.a.a.a.)", false);
   }
 
-  static void verifyMinimalEncoding(String input, String expectedResult, Charset priorityCharset, boolean isGS1) 
+  static void verifyMinimalEncoding(String input, String expectedResult, boolean isGS1)
       throws Exception {
-    MinimalEncoder.ResultList result = MinimalEncoder.encode(input, priorityCharset, isGS1,
-        ErrorCorrectionLevel.L);
-    assertEquals(result.toString(), expectedResult);
+    int[] outVersion = new int[1];
+    MinimalEncoder me = new MinimalEncoder(input, null, isGS1, ErrorCorrectionLevel.L);
+    List<MinimalEncoder.ResultNode> result = me.encode(outVersion);
+    assertEquals(me.toString(result), expectedResult);
   }
 
   private static void verifyGS1EncodedData(QRCode qrCode) {

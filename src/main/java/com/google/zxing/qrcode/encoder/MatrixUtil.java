@@ -26,86 +26,28 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
  */
 final class MatrixUtil {
 
-  private static final int[][] POSITION_DETECTION_PATTERN = {
-      {1, 1, 1, 1, 1, 1, 1},
-      {1, 0, 0, 0, 0, 0, 1},
-      {1, 0, 1, 1, 1, 0, 1},
-      {1, 0, 1, 1, 1, 0, 1},
-      {1, 0, 1, 1, 1, 0, 1},
-      {1, 0, 0, 0, 0, 0, 1},
-      {1, 1, 1, 1, 1, 1, 1},
-  };
+  // Mike-CHANGED: compacted arrays
+  private static final long POSITION_DETECTION_PATTERN =
+      0b1111111L << 42 |
+      0b1000001L << 35 |
+      0b1011101L << 28 |
+      0b1011101L << 21 |
+      0b1011101L << 14 |
+      0b1000001L << 7 |
+      0b1111111L;
 
-  private static final int[][] POSITION_ADJUSTMENT_PATTERN = {
-      {1, 1, 1, 1, 1},
-      {1, 0, 0, 0, 1},
-      {1, 0, 1, 0, 1},
-      {1, 0, 0, 0, 1},
-      {1, 1, 1, 1, 1},
-  };
-
-  // From Appendix E. Table 1, JIS0510X:2004 (p 71). The table was double-checked by komatsu.
-  private static final int[][] POSITION_ADJUSTMENT_PATTERN_COORDINATE_TABLE = {
-      {-1, -1, -1, -1,  -1,  -1,  -1},  // Version 1
-      { 6, 18, -1, -1,  -1,  -1,  -1},  // Version 2
-      { 6, 22, -1, -1,  -1,  -1,  -1},  // Version 3
-      { 6, 26, -1, -1,  -1,  -1,  -1},  // Version 4
-      { 6, 30, -1, -1,  -1,  -1,  -1},  // Version 5
-      { 6, 34, -1, -1,  -1,  -1,  -1},  // Version 6
-      { 6, 22, 38, -1,  -1,  -1,  -1},  // Version 7
-      { 6, 24, 42, -1,  -1,  -1,  -1},  // Version 8
-      { 6, 26, 46, -1,  -1,  -1,  -1},  // Version 9
-      { 6, 28, 50, -1,  -1,  -1,  -1},  // Version 10
-      { 6, 30, 54, -1,  -1,  -1,  -1},  // Version 11
-      { 6, 32, 58, -1,  -1,  -1,  -1},  // Version 12
-      { 6, 34, 62, -1,  -1,  -1,  -1},  // Version 13
-      { 6, 26, 46, 66,  -1,  -1,  -1},  // Version 14
-      { 6, 26, 48, 70,  -1,  -1,  -1},  // Version 15
-      { 6, 26, 50, 74,  -1,  -1,  -1},  // Version 16
-      { 6, 30, 54, 78,  -1,  -1,  -1},  // Version 17
-      { 6, 30, 56, 82,  -1,  -1,  -1},  // Version 18
-      { 6, 30, 58, 86,  -1,  -1,  -1},  // Version 19
-      { 6, 34, 62, 90,  -1,  -1,  -1},  // Version 20
-      { 6, 28, 50, 72,  94,  -1,  -1},  // Version 21
-      { 6, 26, 50, 74,  98,  -1,  -1},  // Version 22
-      { 6, 30, 54, 78, 102,  -1,  -1},  // Version 23
-      { 6, 28, 54, 80, 106,  -1,  -1},  // Version 24
-      { 6, 32, 58, 84, 110,  -1,  -1},  // Version 25
-      { 6, 30, 58, 86, 114,  -1,  -1},  // Version 26
-      { 6, 34, 62, 90, 118,  -1,  -1},  // Version 27
-      { 6, 26, 50, 74,  98, 122,  -1},  // Version 28
-      { 6, 30, 54, 78, 102, 126,  -1},  // Version 29
-      { 6, 26, 52, 78, 104, 130,  -1},  // Version 30
-      { 6, 30, 56, 82, 108, 134,  -1},  // Version 31
-      { 6, 34, 60, 86, 112, 138,  -1},  // Version 32
-      { 6, 30, 58, 86, 114, 142,  -1},  // Version 33
-      { 6, 34, 62, 90, 118, 146,  -1},  // Version 34
-      { 6, 30, 54, 78, 102, 126, 150},  // Version 35
-      { 6, 24, 50, 76, 102, 128, 154},  // Version 36
-      { 6, 28, 54, 80, 106, 132, 158},  // Version 37
-      { 6, 32, 58, 84, 110, 136, 162},  // Version 38
-      { 6, 26, 54, 82, 110, 138, 166},  // Version 39
-      { 6, 30, 58, 86, 114, 142, 170},  // Version 40
-  };
+  private static final int POSITION_ADJUSTMENT_PATTERN =
+      0b11111 << 20 |
+      0b10001 << 15 |
+      0b10101 << 10 |
+      0b10001 << 5 |
+      0b11111;
 
   // Type info cells at the left top corner.
-  private static final int[][] TYPE_INFO_COORDINATES = {
-      {8, 0},
-      {8, 1},
-      {8, 2},
-      {8, 3},
-      {8, 4},
-      {8, 5},
-      {8, 7},
-      {8, 8},
-      {7, 8},
-      {5, 8},
-      {4, 8},
-      {3, 8},
-      {2, 8},
-      {1, 8},
-      {0, 8},
-  };
+  private static final long TYPE_INFO_COORDINATES =
+      (8L << 56) | (8L << 52) | (8L << 48) | (8L << 44) | (8L << 40) | (8L << 36) | (8L << 32) |
+          (8L << 28) | (7L << 24) | (5L << 20) | (4L << 16) | (3L << 12) | (2L << 8) | (1L << 4) /* | 0 */;
+  // END Mike-CHANGED array compaction
 
   // From Appendix D in JISX0510:2004 (p. 67)
   private static final int VERSION_INFO_POLY = 0x1f25;  // 1 1111 0010 0101
@@ -152,8 +94,11 @@ final class MatrixUtil {
   static void embedBasicPatterns(int version, ByteMatrix matrix) throws WriterException {
     // Let's get started with embedding big squares at corners.
     embedPositionDetectionPatternsAndSeparators(matrix);
-    // Then, embed the dark dot at the left bottom corner.
-    embedDarkDotAtLeftBottomCorner(matrix);
+
+    // Embed the lonely dark dot at left bottom corner. JISX0510:2004 (p.46)
+    // Mike-CHANGED: inlined embedDarkDotAtLeftBottomCorner()
+    if (matrix.get(8, matrix.height - 8) == 0) throw new WriterException();
+    matrix.set(8, matrix.height - 8, 1);
 
     // Position adjustment patterns appear if version >= 2.
     maybeEmbedPositionAdjustmentPatterns(version, matrix);
@@ -167,27 +112,28 @@ final class MatrixUtil {
     BitArray typeInfoBits = new BitArray();
     makeTypeInfoBits(ecLevel, maskPattern, typeInfoBits);
 
-    for (int i = 0; i < typeInfoBits.getSize(); ++i) {
+    long typeInfoCoordinateX = TYPE_INFO_COORDINATES;
+    long typeInfoCoordinateY = TYPE_INFO_COORDINATES;
+    for (int i = 0; i < 15; ++i) {
       // Place bits in LSB to MSB order.  LSB (least significant bit) is the last value in
       // "typeInfoBits".
       boolean bit = typeInfoBits.get(typeInfoBits.getSize() - 1 - i);
 
       // Type info bits at the left top corner. See 8.9 of JISX0510:2004 (p.46).
-      int[] coordinates = TYPE_INFO_COORDINATES[i];
-      int x1 = coordinates[0];
-      int y1 = coordinates[1];
-      matrix.set(x1, y1, bit);
+      matrix.set((int) ((typeInfoCoordinateX >>> 56) & 0xF), (int) (typeInfoCoordinateY & 0xF), bit);
+      typeInfoCoordinateX <<= 4;
+      typeInfoCoordinateY >>>= 4;
 
       int x2;
       int y2;
       if (i < 8) {
         // Right top corner.
-        x2 = matrix.getWidth() - i - 1;
+        x2 = matrix.width - i - 1;
         y2 = 8;
       } else {
         // Left bottom corner.
         x2 = 8;
-        y2 = matrix.getHeight() - 7 + (i - 8);
+        y2 = matrix.height - 7 + (i - 8);
       }
       matrix.set(x2, y2, bit);
     }
@@ -209,9 +155,9 @@ final class MatrixUtil {
         boolean bit = versionInfoBits.get(bitIndex);
         bitIndex--;
         // Left bottom corner.
-        matrix.set(i, matrix.getHeight() - 11 + j, bit);
+        matrix.set(i, matrix.height - 11 + j, bit);
         // Right bottom corner.
-        matrix.set(matrix.getHeight() - 11 + j, i, bit);
+        matrix.set(matrix.height - 11 + j, i, bit);
       }
     }
   }
@@ -224,14 +170,14 @@ final class MatrixUtil {
     int bitIndex = 0;
     int direction = -1;
     // Start from the right bottom cell.
-    int x = matrix.getWidth() - 1;
-    int y = matrix.getHeight() - 1;
+    int x = matrix.width - 1;
+    int y = matrix.height - 1;
     while (x > 0) {
       // Skip the vertical timing pattern.
       if (x == 6) {
         x -= 1;
       }
-      while (y >= 0 && y < matrix.getHeight()) {
+      while (y >= 0 && y < matrix.height) {
         for (int i = 0; i < 2; ++i) {
           int xx = x - i;
           // Skip the cell if it's not empty.
@@ -266,14 +212,7 @@ final class MatrixUtil {
     }
   }
 
-  // Return the position of the most significant bit set (to one) in the "value". The most
-  // significant bit is position 32. If there is no bit set, return 0. Examples:
-  // - findMSBSet(0) => 0
-  // - findMSBSet(1) => 1
-  // - findMSBSet(255) => 8
-  static int findMSBSet(int value) {
-    return 32 - Integer.numberOfLeadingZeros(value);
-  }
+  // Mike-REMOVED findMSBSet
 
   // Calculate BCH (Bose-Chaudhuri-Hocquenghem) code for "value" using polynomial "poly". The BCH
   // code is used for encoding type information and version information.
@@ -306,11 +245,11 @@ final class MatrixUtil {
     }
     // If poly is "1 1111 0010 0101" (version info poly), msbSetInPoly is 13. We'll subtract 1
     // from 13 to make it 12.
-    int msbSetInPoly = findMSBSet(poly);
+    int msbSetInPoly = 32 - Integer.numberOfLeadingZeros(poly); // Mike-CHANGED: inlined findMSBSet
     value <<= msbSetInPoly - 1;
     // Do the division business using exclusive-or operations.
-    while (findMSBSet(value) >= msbSetInPoly) {
-      value ^= poly << (findMSBSet(value) - msbSetInPoly);
+    while (32 - Integer.numberOfLeadingZeros(value) >= msbSetInPoly) {
+      value ^= poly << (32 - Integer.numberOfLeadingZeros(value) - msbSetInPoly);
     }
     // Now the "value" is the remainder (i.e. the BCH code)
     return value;
@@ -359,7 +298,7 @@ final class MatrixUtil {
   private static void embedTimingPatterns(ByteMatrix matrix) {
     // -8 is for skipping position detection patterns (size 7), and two horizontal/vertical
     // separation patterns (size 1). Thus, 8 = 7 + 1.
-    for (int i = 8; i < matrix.getWidth() - 8; ++i) {
+    for (int i = 8; i < matrix.width - 8; ++i) {
       int bit = (i + 1) % 2;
       // Horizontal line.
       if (isEmpty(matrix.get(i, 6))) {
@@ -372,13 +311,7 @@ final class MatrixUtil {
     }
   }
 
-  // Embed the lonely dark dot at left bottom corner. JISX0510:2004 (p.46)
-  private static void embedDarkDotAtLeftBottomCorner(ByteMatrix matrix) throws WriterException {
-    if (matrix.get(8, matrix.getHeight() - 8) == 0) {
-      throw new WriterException();
-    }
-    matrix.set(8, matrix.getHeight() - 8, 1);
-  }
+  // Mike-REMOVED embedDarkDotAtLeftBottomCorner
 
   private static void embedHorizontalSeparationPattern(int xStart,
                                                        int yStart,
@@ -402,20 +335,12 @@ final class MatrixUtil {
     }
   }
 
-  private static void embedPositionAdjustmentPattern(int xStart, int yStart, ByteMatrix matrix) {
-    for (int y = 0; y < 5; ++y) {
-      int[] patternY = POSITION_ADJUSTMENT_PATTERN[y];
-      for (int x = 0; x < 5; ++x) {
-        matrix.set(xStart + x, yStart + y, patternY[x]);
-      }
-    }
-  }
-
-  private static void embedPositionDetectionPattern(int xStart, int yStart, ByteMatrix matrix) {
-    for (int y = 0; y < 7; ++y) {
-      int[] patternY = POSITION_DETECTION_PATTERN[y];
-      for (int x = 0; x < 7; ++x) {
-        matrix.set(xStart + x, yStart + y, patternY[x]);
+  // Mike-CHANGED: generalized embedPositionAdjustmentPattern and embedPositionDetectionPattern
+  private static void embedPattern(int xStart, int yStart, ByteMatrix matrix, long pattern, int size) {
+    for (int y = 0; y < size; ++y) {
+      for (int x = 0; x < size; ++x) {
+        matrix.set(xStart + x, yStart + y, (int) (pattern & 1));
+        pattern >>>= 1;
       }
     }
   }
@@ -423,32 +348,31 @@ final class MatrixUtil {
   // Embed position detection patterns and surrounding vertical/horizontal separators.
   private static void embedPositionDetectionPatternsAndSeparators(ByteMatrix matrix) throws WriterException {
     // Embed three big squares at corners.
-    int pdpWidth = POSITION_DETECTION_PATTERN[0].length;
     // Left top corner.
-    embedPositionDetectionPattern(0, 0, matrix);
+    embedPattern(0, 0, matrix, POSITION_DETECTION_PATTERN, 7);
     // Right top corner.
-    embedPositionDetectionPattern(matrix.getWidth() - pdpWidth, 0, matrix);
+    embedPattern(matrix.width - 7, 0, matrix, POSITION_DETECTION_PATTERN, 7);
     // Left bottom corner.
-    embedPositionDetectionPattern(0, matrix.getWidth() - pdpWidth, matrix);
+    embedPattern(0, matrix.width - 7, matrix, POSITION_DETECTION_PATTERN, 7);
 
     // Embed horizontal separation patterns around the squares.
     int hspWidth = 8;
     // Left top corner.
     embedHorizontalSeparationPattern(0, hspWidth - 1, matrix);
     // Right top corner.
-    embedHorizontalSeparationPattern(matrix.getWidth() - hspWidth,
+    embedHorizontalSeparationPattern(matrix.width - hspWidth,
         hspWidth - 1, matrix);
     // Left bottom corner.
-    embedHorizontalSeparationPattern(0, matrix.getWidth() - hspWidth, matrix);
+    embedHorizontalSeparationPattern(0, matrix.width - hspWidth, matrix);
 
     // Embed vertical separation patterns around the squares.
     int vspSize = 7;
     // Left top corner.
     embedVerticalSeparationPattern(vspSize, 0, matrix);
     // Right top corner.
-    embedVerticalSeparationPattern(matrix.getHeight() - vspSize - 1, 0, matrix);
+    embedVerticalSeparationPattern(matrix.height - vspSize - 1, 0, matrix);
     // Left bottom corner.
-    embedVerticalSeparationPattern(vspSize, matrix.getHeight() - vspSize,
+    embedVerticalSeparationPattern(vspSize, matrix.height - vspSize,
         matrix);
   }
 
@@ -457,16 +381,17 @@ final class MatrixUtil {
     if (version < 2) {  // The patterns appear if version >= 2
       return;
     }
-    int index = version - 1;
-    int[] coordinates = POSITION_ADJUSTMENT_PATTERN_COORDINATE_TABLE[index];
-    for (int y : coordinates) {
-      if (y >= 0) {
-        for (int x : coordinates) {
-          if (x >= 0 && isEmpty(matrix.get(x, y))) {
+    int offset = 7 * (version - 1);
+    for (int i = 0; i < 7; i++) {
+      int y = Encoder.POSITION_ADJUSTMENT_PATTERN_COORDINATE_TABLE[offset + i] & 0xFF;
+      if (y != 255) {
+        for (int j = 0; j < 7; j++) {
+          int x = Encoder.POSITION_ADJUSTMENT_PATTERN_COORDINATE_TABLE[offset + j] & 0xFF;
+          if (x != 255 && isEmpty(matrix.get(x, y))) {
             // If the cell is unset, we embed the position adjustment pattern here.
             // -2 is necessary since the x/y coordinates point to the center of the pattern, not the
             // left top corner.
-            embedPositionAdjustmentPattern(x - 2, y - 2, matrix);
+            embedPattern(x - 2, y - 2, matrix, POSITION_ADJUSTMENT_PATTERN, 5);
           }
         }
       }

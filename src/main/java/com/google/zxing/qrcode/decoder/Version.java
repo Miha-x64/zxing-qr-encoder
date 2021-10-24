@@ -77,8 +77,8 @@ public final class Version {
     int offset = 5 * (versionNumber - 1);
     int ecCodewords = VDATA[offset + 4] >>> 8 & 0xFF;
     int ecbArray = VDATA[offset + 1];
-    return count1(ecbArray) * ((ecbArray >>> 8 & 0xFF) + ecCodewords) +
-        count2(ecbArray) * ((ecbArray >>> 24 & 0xFF) + ecCodewords);
+    return (ecbArray & 0xFF) * ((ecbArray >>> 8 & 0xFF) + ecCodewords) +
+        (ecbArray >>> 16 & 0xFF) * ((ecbArray >>> 24 & 0xFF) + ecCodewords);
   }
   public static int getDimensionFor(int versionNumber) {
     return 17 + 4 * versionNumber;
@@ -88,17 +88,11 @@ public final class Version {
   }
   public static int getNumBlocksFor(int versionNumber, ErrorCorrectionLevel ecLevel) {
     int ecBlocks = VDATA[5 * (versionNumber - 1) + ecLevel.ordinal()];
-    return count1(ecBlocks) + count2(ecBlocks);
+    return (ecBlocks & 0xFF) + (ecBlocks >>> 16 & 0xFF);
   }
 
   // Mike-REMOVED getProvisionalVersionForDimension, getVersionForNumber, decodeVersionInformation, buildFunctionPattern
   // Mike-REMOVED ECBlocks, ECB
-
-  // Mike-ADDED
-  static int count1(int ecb) { return ecb & 0xFF; }
-  static int count2(int ecb) { return ecb >>> 16 & 0xFF; }
-  // END Mike-ADDED
-
   // Mike-REMOVED toString, buildVersions
 
 }

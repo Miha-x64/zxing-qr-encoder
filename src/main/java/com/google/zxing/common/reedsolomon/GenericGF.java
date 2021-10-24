@@ -29,8 +29,7 @@ package com.google.zxing.common.reedsolomon;
  */
 public final class GenericGF {
 
-  // Mike-REMOVED Aztec, DataMatrix, MaxiCode GFs
-  public static final GenericGF QR_CODE_FIELD_256 = new GenericGF(0x011D, 256, 0); // x^8 + x^4 + x^3 + x^2 + 1
+  // Mike-REMOVED all static final GenericGFs
 
   // Mike-CHANGED: unprivated expTable, zero, size, generatorBase; removed one and primitive
   final int[] expTable;
@@ -72,18 +71,7 @@ public final class GenericGF {
     zero = new GenericGFPoly(this, new int[]{0});
   }
 
-  // Mike-REMOVED getZero, getOne, buildMonomial
-
-  /**
-   * Implements both addition and subtraction -- they are the same in GF(size).
-   *
-   * @return sum/difference of a and b
-   */
-  static int addOrSubtract(int a, int b) {
-    return a ^ b;
-  }
-
-  // Mike-REMOVED exp, log
+  // Mike-REMOVED getZero, getOne, buildMonomial, addOrSubtract, exp, log
 
   /**
    * @return multiplicative inverse of a

@@ -26,66 +26,64 @@ import java.util.Arrays;
  */
 public final class ByteMatrix {
 
-  private final byte[][] bytes;
-  private final int width;
-  private final int height;
+  // Mike: added widthInts, flattened the array, made w/h public
+  private final int widthInts;
+  private final int[] matrix;
+  public final int width;
+  public final int height;
 
   public ByteMatrix(int width, int height) {
-    bytes = new byte[height][width];
+    this.widthInts = width / 16 + ((width % 16) > 0 ? 1 : 0);
+    this.matrix = new int[height * widthInts];
     this.width = width;
     this.height = height;
   }
 
-  public int getHeight() {
-    return height;
-  }
-
-  public int getWidth() {
-    return width;
-  }
+  // Mike-REMOVED: getWidth, getHeight
 
   public byte get(int x, int y) {
-    return bytes[y][x];
-  }
-
-  /**
-   * @return an internal representation as bytes, in row-major order. array[y][x] represents point (x,y)
-   */
-  public byte[][] getArray() {
-    return bytes;
+    // Mike-CHANGED: unpacking from array
+    int value = ((matrix[widthInts*y + (x>>4)] >>> ((x & 15) << 1)) & 3);
+    return (byte) ((value ^ 2) - 2); // sign extend
   }
 
   // Mike-REMOVED set(int, int, byte)
 
   public void set(int x, int y, int value) {
-    bytes[y][x] = (byte) value;
+    // Mike-CHANGED: packing to array
+    int shift = (x & 15) << 1;
+    int index = widthInts * y + (x >> 4);
+    matrix[index] = (matrix[index] & ~(3 << shift)) | ((value & 3) << shift);
   }
 
   public void set(int x, int y, boolean value) {
-    bytes[y][x] = (byte) (value ? 1 : 0);
+    set(x, y, value ? 1 : 0); // Mike-CHANGED: delegated to overload
   }
 
   public void clear(byte value) {
-    for (byte[] aByte : bytes) {
-      Arrays.fill(aByte, value);
-    }
+    int val = (value & 3); // Mike-CHANGED: filling single array
+    val = val << 2 | val;
+    val = val << 4 | val;
+    val = val << 8 | val;
+    val = val << 16 | val;
+    Arrays.fill(matrix, val);
   }
 
   @Override
   public String toString() {
     StringBuilder result = new StringBuilder(2 * width * height + 2);
     for (int y = 0; y < height; ++y) {
-      byte[] bytesY = bytes[y];
       for (int x = 0; x < width; ++x) {
-        switch (bytesY[x]) {
+        result.append(' '); // Mike-CHANGED: using accessor, appending chars
+        switch (get(x, y)) {
           case 0:
-            result.append(" 0");
+            result.append('0');
             break;
           case 1:
-            result.append(" 1");
+            result.append('1');
             break;
           default:
-            result.append("  ");
+            result.append(' ');
             break;
         }
       }

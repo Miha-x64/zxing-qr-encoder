@@ -32,7 +32,7 @@ public final class MaskUtilTestCase extends Assert {
     matrix.set(1, 0, 0);
     matrix.set(2, 0, 0);
     matrix.set(3, 0, 0);
-    assertEquals(0, MaskUtil.applyMaskPenaltyRule1(matrix));
+    assertEquals(0, applyMaskPenaltyRule1(matrix));
     // Horizontal.
     matrix = new ByteMatrix(6, 1);
     matrix.set(0, 0, 0);
@@ -41,9 +41,9 @@ public final class MaskUtilTestCase extends Assert {
     matrix.set(3, 0, 0);
     matrix.set(4, 0, 0);
     matrix.set(5, 0, 1);
-    assertEquals(3, MaskUtil.applyMaskPenaltyRule1(matrix));
+    assertEquals(3, applyMaskPenaltyRule1(matrix));
     matrix.set(5, 0, 0);
-    assertEquals(4, MaskUtil.applyMaskPenaltyRule1(matrix));
+    assertEquals(4, applyMaskPenaltyRule1(matrix));
     // Vertical.
     matrix = new ByteMatrix(1, 6);
     matrix.set(0, 0, 0);
@@ -52,9 +52,13 @@ public final class MaskUtilTestCase extends Assert {
     matrix.set(0, 3, 0);
     matrix.set(0, 4, 0);
     matrix.set(0, 5, 1);
-    assertEquals(3, MaskUtil.applyMaskPenaltyRule1(matrix));
+    assertEquals(3, applyMaskPenaltyRule1(matrix));
     matrix.set(0, 5, 0);
-    assertEquals(4, MaskUtil.applyMaskPenaltyRule1(matrix));
+    assertEquals(4, applyMaskPenaltyRule1(matrix));
+  }
+
+  private int applyMaskPenaltyRule1(ByteMatrix matrix) {
+    return MaskUtil.applyMaskPenaltyRule1Internal(matrix, true) + MaskUtil.applyMaskPenaltyRule1Internal(matrix, false);
   }
 
   @Test
