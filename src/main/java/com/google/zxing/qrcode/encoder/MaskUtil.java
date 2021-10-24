@@ -23,11 +23,7 @@ package com.google.zxing.qrcode.encoder;
  */
 final class MaskUtil {
 
-  // Penalty weights from section 6.8.2.1
-  private static final int N1 = 3;
-  private static final int N2 = 3;
-  private static final int N3 = 40;
-  private static final int N4 = 10;
+  // Mike-REMOVED constants, now they are inlined
 
   private MaskUtil() {
     // do nothing
@@ -52,7 +48,7 @@ final class MaskUtil {
         }
       }
     }
-    return N2 * penalty;
+    return 3 * penalty; // Mike-CHANGED inlined constant
   }
 
   /**
@@ -90,7 +86,7 @@ final class MaskUtil {
         }
       }
     }
-    return numPenalties * N3;
+    return numPenalties * 40; // Mike-CHANGED inlined constant
   }
 
   // Mike-CHANGED: accepting full matrix and using accessors
@@ -136,7 +132,7 @@ final class MaskUtil {
     }
     int numTotalCells = matrix.height * matrix.width;
     int fivePercentVariances = Math.abs(numDarkCells * 2 - numTotalCells) * 10 / numTotalCells;
-    return fivePercentVariances * N4;
+    return fivePercentVariances * 10; // Mike-CHANGED inlined constant
   }
 
   /**
@@ -197,14 +193,14 @@ final class MaskUtil {
           numSameBitCells++;
         } else {
           if (numSameBitCells >= 5) {
-            penalty += N1 + (numSameBitCells - 5);
+            penalty += 3 + (numSameBitCells - 5); // Mike-CHANGED inlined constant
           }
           numSameBitCells = 1;  // Include the cell itself.
           prevBit = bit;
         }
       }
       if (numSameBitCells >= 5) {
-        penalty += N1 + (numSameBitCells - 5);
+        penalty += 3 + (numSameBitCells - 5); // Mike-CHANGED inlined constant
       }
     }
     return penalty;

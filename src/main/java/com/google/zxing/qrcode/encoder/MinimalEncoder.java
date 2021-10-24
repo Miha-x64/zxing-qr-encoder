@@ -61,59 +61,39 @@ final class MinimalEncoder {
   private static final int VERSIONS = 40 << 24 | 26 << 16 | 9 << 8 /*| 0*/;
 
   // List of encoders that potentially encode characters not in ISO-8859-1 in one byte.
-  private static final List<CharsetEncoder> ENCODERS = new ArrayList<>();
+  private static final CharsetEncoder[] ENCODERS; // Mike-CHANGED from ArrayList to array
   static { // Mike-CHANGED encoder search algorithm
+    ArrayList<CharsetEncoder> encoders = new ArrayList<>(24);
     StringBuilder sb = new StringBuilder("ISO-8859-");
-    tryAddEncoder(sb, 2, 12);
-    tryAddEncoder(sb, 13, 17);
+    tryAddEncoder(encoders, sb, 2, 12);
+    tryAddEncoder(encoders, sb, 13, 17);
     sb.delete(0, sb.length()).append("windows-125");
-    tryAddEncoder(sb, 0, 9);
-    tryAddEncoder("Shift_JIS");
+    tryAddEncoder(encoders, sb, 0, 9);
+    tryAddEncoder(encoders, "Shift_JIS");
+    ENCODERS = encoders.toArray(new CharsetEncoder[encoders.size()]);
   }
-  private static void tryAddEncoder(StringBuilder sb, int start, int until) {
+  private static void tryAddEncoder(ArrayList<CharsetEncoder> into, StringBuilder sb, int start, int until) {
     int length = sb.length();
     for (int i = start; i < until; i++) {
-      tryAddEncoder(sb.append(i).toString());
+      tryAddEncoder(into, sb.append(i).toString());
       sb.setLength(length);
     }
   }
-  private static void tryAddEncoder(String name) {
+  private static void tryAddEncoder(ArrayList<CharsetEncoder> into, String name) {
     if (Encoder.eciByName(name) != null) {
       try {
-        ENCODERS.add(Charset.forName(name).newEncoder());
+        into.add(Charset.forName(name).newEncoder());
       } catch (UnsupportedCharsetException e) {
         // continue
       }
     }
   }
 
-
-  // Mike-CHANGED unprivated
-  final String stringToEncode;
-  final boolean isGS1;
-  final CharsetEncoder[] encoders;
-  private final int priorityEncoderIndex;
-  final ErrorCorrectionLevel ecLevel;
-  // END Mike-CHANGED
-
-  /**
-   * Creates a MinimalEncoder
-   *
-   * @param stringToEncode The string to encode
-   * @param priorityCharset The preferred {@link Charset}. When the value of the argument is null, the algorithm
-   *   chooses charsets that leads to a minimal representation. Otherwise the algorithm will use the priority
-   *   charset to encode any character in the input that can be encoded by it if the charset is among the
-   *   supported charsets.
-   * @param isGS1 {@code true} if a FNC1 is to be prepended; {@code false} otherwise
-   * @param ecLevel The error correction level.
-   * @see ResultList#getVersion
-   */
-  MinimalEncoder(String stringToEncode, Charset priorityCharset, boolean isGS1, ErrorCorrectionLevel ecLevel) {
-
-    this.stringToEncode = stringToEncode;
-    this.isGS1 = isGS1;
-    this.ecLevel = ecLevel;
-
+  // Mike-REMOVED instance fields, version, encode
+  static List<ResultNode> encode(
+      String stringToEncode, Charset priorityCharset, boolean isGS1, ErrorCorrectionLevel ecLevel, int[] outVersion
+  ) throws WriterException {
+    // Mike-CHANGED inlined constructor contents
     List<CharsetEncoder> neededEncoders = new ArrayList<>();
     neededEncoders.add(StandardCharsets.ISO_8859_1.newEncoder());
     boolean needUnicodeEncoder = priorityCharset != null && priorityCharset.name().startsWith("UTF");
@@ -142,6 +122,7 @@ final class MinimalEncoder {
       }
     }
 
+    CharsetEncoder[] encoders;
     if (neededEncoders.size() == 1 && !needUnicodeEncoder) {
       encoders = new CharsetEncoder[] { neededEncoders.get(0) };
     } else {
@@ -155,22 +136,16 @@ final class MinimalEncoder {
       encoders[index + 1] = StandardCharsets.UTF_16BE.newEncoder();
     }
 
-    int priorityEncoderIndexValue = -1;
+    int priorityEncoderIndex = -1;
     if (priorityCharset != null) {
       for (int i = 0; i < encoders.length; i++) {
         if (encoders[i] != null && priorityCharset.name().equals(encoders[i].charset().name())) {
-          priorityEncoderIndexValue = i;
+          priorityEncoderIndex = i;
           break;
         }
       }
     }
-    priorityEncoderIndex = priorityEncoderIndexValue;
-  }
 
-  // Mike-REMOVED version, encode
-
-  // Mike-REMOVED version
-  List<ResultNode> encode(int[] outVersion) throws WriterException {
     // compute minimal encoding trying the three version sizes.
     List<ResultNode> result = null;
     int smallestSize = Integer.MAX_VALUE;
@@ -179,8 +154,8 @@ final class MinimalEncoder {
       // Mike-CHANGED generation algorithm and added setting outVersion
       int tryVersion = (VERSIONS >>> (8 * (i + 1))) & 0xFF;
       int prevOutVersion = outVersion[0];
-      outVersion[0] = tryVersion;
-      List<ResultNode> r = encodeSpecificVersion(outVersion);
+      outVersion[0] = tryVersion; // Mike-ADDED arguments:
+      List<ResultNode> r = encodeSpecificVersion(stringToEncode, encoders, priorityEncoderIndex, outVersion, isGS1, ecLevel);
       int size = getSize(r, outVersion[0]);
       if (Encoder.willFit(size, tryVersion, ecLevel) && size < smallestSize) {
         smallestSize = size;
@@ -201,8 +176,9 @@ final class MinimalEncoder {
     return version <= 9 ? 0 : version <= 26 ? 1 : 2;
   }
 
-  // Mike-CHANGED: inlined isNumeric, isDoubleByteKanji, isAlphanumeric; replaced enum switch with ordinal switch
-  boolean canEncode(Mode mode, char c) {
+  // Mike-CHANGED: inlined isNumeric, isDoubleByteKanji, isAlphanumeric;
+  // replaced enum switch with ordinal switch; made static
+  static boolean canEncode(Mode mode, char c) {
     switch (mode.ordinal()) {
       case 0: return Encoder.isOnlyDoubleByteKanji(String.valueOf(c));
       case 1: return Encoder.getAlphanumericCode(c) != -1;
@@ -225,15 +201,18 @@ final class MinimalEncoder {
     }
   }
 
-  void addEdge(List<Edge>[][][] edges, int position, Edge edge) {
+  // Mike-CHANGED: made static, simplified contents
+  static void addEdge(List<Edge>[][][] edges, int position, Edge edge) {
     int vertexIndex = position + edge.characterLength;
-    if (edges[vertexIndex][edge.charsetEncoderIndex][getCompactedOrdinal(edge.mode)] == null) {
-      edges[vertexIndex][edge.charsetEncoderIndex][getCompactedOrdinal(edge.mode)] = new ArrayList<>();
-    }
-    edges[vertexIndex][edge.charsetEncoderIndex][getCompactedOrdinal(edge.mode)].add(edge);
+    List<Edge>[] edgesList = edges[vertexIndex][edge.charsetEncoderIndex];
+    int ordinal = getCompactedOrdinal(edge.mode);
+    if (edgesList[ordinal] == null) edgesList[ordinal] = new ArrayList<>();
+    edgesList[ordinal].add(edge);
   }
 
-  void addEdges(int version, List<Edge>[][][] edges, int from, Edge previous) {
+  // Mike-CHANGED made static
+  static void addEdges(int version, List<Edge>[][][] edges, int from, Edge previous,
+                CharsetEncoder[] encoders, int priorityEncoderIndex, String stringToEncode) { // Mike-ADDED params
     int start = 0;
     int end = encoders.length;
     if (priorityEncoderIndex >= 0 && encoders[priorityEncoderIndex].canEncode(stringToEncode.charAt(from))) {
@@ -266,7 +245,9 @@ final class MinimalEncoder {
     // END Mike-CHANGED
   }
   // Mike-CHANGED to return list without a wrapper; made version parameter inout
-  List<ResultNode> encodeSpecificVersion(int[] version) throws WriterException {
+  static List<ResultNode> encodeSpecificVersion( // Mike-CHANGED: made static, added params
+      String stringToEncode, CharsetEncoder[] encoders, int priorityEncoderIndex, int[] version, boolean isGS1, ErrorCorrectionLevel ecLevel
+  ) throws WriterException {
 
     @SuppressWarnings("checkstyle:lineLength")
     /* A vertex represents a tuple of a position in the input, a mode and a character encoding where position 0
@@ -389,7 +370,7 @@ final class MinimalEncoder {
     @SuppressWarnings("unchecked")
     List<Edge>[][][] edges = new ArrayList[inputLength + 1][encoders.length][4];
     int v = version[0];
-    addEdges(v, edges, 0, null);
+    addEdges(v, edges, 0, null, encoders, priorityEncoderIndex, stringToEncode); // Mike-ADDED arguments
 
     for (int i = 1; i <= inputLength; i++) {
       for (int j = 0; j < encoders.length; j++) {
@@ -411,7 +392,7 @@ final class MinimalEncoder {
             localEdges.clear();
             localEdges.add(minimalEdge);
             if (i < inputLength) {
-              addEdges(v, edges, i, minimalEdge);
+              addEdges(v, edges, i, minimalEdge, encoders, priorityEncoderIndex, stringToEncode); // Mike-ADDED args
             }
           }
         }
@@ -493,8 +474,8 @@ final class MinimalEncoder {
     return stringToEncode.substring(fromPosition, fromPosition + characterLength).getBytes(encoder.charset()).length;
   }
 
-  // Mike-CHANGED replaced class with a method
-  List<ResultNode> ResultList(int[] version, Edge solution, boolean isGS1, ErrorCorrectionLevel ecLevel, CharsetEncoder[] encoders, String stringToEncode) {
+  // Mike-CHANGED replaced class with a static method
+  static List<ResultNode> ResultList(int[] version, Edge solution, boolean isGS1, ErrorCorrectionLevel ecLevel, CharsetEncoder[] encoders, String stringToEncode) {
     int length = 0;
     Edge current = solution;
     boolean containsECI = false;
@@ -551,7 +532,7 @@ final class MinimalEncoder {
   }
 
   // Mike-REMOVED getSize()
-  int getSize(List<ResultNode> list, int version) { // Mike-CHANGED parameters
+  static int getSize(List<ResultNode> list, int version) { // Mike-CHANGED parameters, made static
     int result = 0;
     for (ResultNode resultNode : list) {
       result += resultNode.getSize(version);
@@ -559,16 +540,7 @@ final class MinimalEncoder {
     return result;
   }
 
-  /**
-   * appends the bits
-   */
-  void getBits(List<ResultNode> list, BitArray bits, int version) throws WriterException {
-    for (ResultNode resultNode : list) { // Mike-CHANGED parameters
-      resultNode.getBits(bits, version);
-    }
-  }
-
-  // Mike-INLINED getVersion()
+  // Mike-REMOVED getBits, getVersion (inlined)
   // Mike-REMOVED toString()
 
   static final class ResultNode {  // Mike-CHANGED parameters, made static, unprivated mode

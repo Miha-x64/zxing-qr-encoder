@@ -896,8 +896,8 @@ public final class EncoderTestCase extends Assert {
   static void verifyMinimalEncoding(String input, String expectedResult, boolean isGS1)
       throws Exception {
     int[] outVersion = new int[1];
-    MinimalEncoder me = new MinimalEncoder(input, null, isGS1, ErrorCorrectionLevel.L);
-    List<MinimalEncoder.ResultNode> result = me.encode(outVersion);
+    List<MinimalEncoder.ResultNode> result =
+        MinimalEncoder.encode(input, null, isGS1, ErrorCorrectionLevel.L, outVersion);
     assertEquals(toString(result), expectedResult);
   }
 

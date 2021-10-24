@@ -23,7 +23,6 @@ import com.google.zxing.common.reedsolomon.GenericGF;
 import com.google.zxing.common.reedsolomon.GenericGFPoly;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import com.google.zxing.qrcode.decoder.Mode;
-import com.google.zxing.qrcode.decoder.Version;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -152,12 +151,16 @@ public final class Encoder {
       Charset priorityEncoding = encoding.equals(DEFAULT_BYTE_MODE_ENCODING) ? null : encoding;
       // Mike-CHANGED: getting version to int[], inlined ResultList class
       int[] tmpVersion = new int[1];
-      MinimalEncoder me = new MinimalEncoder(content, priorityEncoding, hasGS1FormatHint, ecLevel);
-      List<MinimalEncoder.ResultNode> rn = me.encode(tmpVersion);
+      List<MinimalEncoder.ResultNode> rn = // Mike-CHANGED to static call
+          MinimalEncoder.encode(content, priorityEncoding, hasGS1FormatHint, ecLevel, tmpVersion);
 
       headerAndDataBits = new BitArray();
       version = tmpVersion[0];
-      me.getBits(rn, headerAndDataBits, version);
+
+      // Mike-CHANGED inlined MinimalEncoder.getBits
+      for (MinimalEncoder.ResultNode resultNode : rn) { // Mike-CHANGED parameters
+        resultNode.getBits(headerAndDataBits, version);
+      }
 
     } else {
 
@@ -211,20 +214,20 @@ public final class Encoder {
       headerAndDataBits.appendBitArray(dataBits);
     }
 
-    int totalCodewords = Version.getTotalCodewordsFor(version);
-    int numDataBytes = totalCodewords - Version.getTotalECCodewordsFor(version, ecLevel);
+    int totalCodewords = totalCodewordsForVersion(version);
+    int numDataBytes = totalCodewords - totalECCodewordsForVersion(version, ecLevel);
 
     // Terminate the bits properly.
     terminateBits(numDataBytes, headerAndDataBits);
 
     // Interleave data bits with error correction code.
     BitArray finalBits = interleaveWithECBytes(
-        headerAndDataBits, totalCodewords, numDataBytes, Version.getNumBlocksFor(version, ecLevel));
+        headerAndDataBits, totalCodewords, numDataBytes, numBlocksForVersion(version, ecLevel));
 
     // Mike-MOVED QRCode object creation from here
 
     //  Choose the mask pattern and set to "qrCode".
-    int dimension = Version.getDimensionFor(version);
+    int dimension = dimensionForVersion(version);
     ByteMatrix matrix = new ByteMatrix(dimension, dimension);
 
     // Enable manual selection of the pattern to be used via hint
@@ -362,9 +365,9 @@ public final class Encoder {
   static boolean willFit(int numInputBits, int version, ErrorCorrectionLevel ecLevel) {
     // In the following comments, we use numbers of Version 7-H.
     // numBytes = 196
-    int numBytes = Version.getTotalCodewordsFor(version);
+    int numBytes = totalCodewordsForVersion(version);
     // getNumECBytes = 130
-    int numEcBytes = Version.getTotalECCodewordsFor(version, ecLevel);
+    int numEcBytes = totalECCodewordsForVersion(version, ecLevel);
     // getNumDataBytes = 196 - 130 = 66
     int numDataBytes = numBytes - numEcBytes;
     int totalInputBytes = (numInputBits + 7) / 8;
@@ -734,5 +737,76 @@ public final class Encoder {
     Arrays.fill(toEncode, dataBytes, dataBytes + numZeroCoefficients, 0); // Mike-CHANGED Arrays.fill instead of a loop
     System.arraycopy(coefficients, 0, toEncode, dataBytes + numZeroCoefficients, coefficients.length);
   }
+  // END Mike-MOVED
+
+  // Mike-MOVED from Version
+  // Mike-REMOVED VERSION_DECODE_INFO
+  // Mike-CHANGED inlined buildVersions, flattened version data
+  private static final int[] VDATA = {
+      1 | 16 << 8, 1 | 19 << 8, 1 | 9 << 8, 1 | 13 << 8, 10 | 7 << 8 | 17 << 16 | 13 << 24,
+      1 | 28 << 8, 1 | 34 << 8, 1 | 16 << 8, 1 | 22 << 8, 16 | 10 << 8 | 28 << 16 | 22 << 24,
+      1 | 44 << 8, 1 | 55 << 8, 2 | 13 << 8, 2 | 17 << 8, 26 | 15 << 8 | 22 << 16 | 18 << 24,
+      2 | 32 << 8, 1 | 80 << 8, 4 | 9 << 8, 2 | 24 << 8, 18 | 20 << 8 | 16 << 16 | 26 << 24,
+      2 | 43 << 8, 1 | 108 << 8, 2 | 11 << 8 | 2 << 16 | 12 << 24, 2 | 15 << 8 | 2 << 16 | 16 << 24, 24 | 26 << 8 | 22 << 16 | 18 << 24,
+      4 | 27 << 8, 2 | 68 << 8, 4 | 15 << 8, 4 | 19 << 8, 16 | 18 << 8 | 28 << 16 | 24 << 24,
+      4 | 31 << 8, 2 | 78 << 8, 4 | 13 << 8 | 1 << 16 | 14 << 24, 2 | 14 << 8 | 4 << 16 | 15 << 24, 18 | 20 << 8 | 26 << 16 | 18 << 24,
+      2 | 38 << 8 | 2 << 16 | 39 << 24, 2 | 97 << 8, 4 | 14 << 8 | 2 << 16 | 15 << 24, 4 | 18 << 8 | 2 << 16 | 19 << 24, 22 | 24 << 8 | 26 << 16 | 22 << 24,
+      3 | 36 << 8 | 2 << 16 | 37 << 24, 2 | 116 << 8, 4 | 12 << 8 | 4 << 16 | 13 << 24, 4 | 16 << 8 | 4 << 16 | 17 << 24, 22 | 30 << 8 | 24 << 16 | 20 << 24,
+      4 | 43 << 8 | 1 << 16 | 44 << 24, 2 | 68 << 8 | 2 << 16 | 69 << 24, 6 | 15 << 8 | 2 << 16 | 16 << 24, 6 | 19 << 8 | 2 << 16 | 20 << 24, 26 | 18 << 8 | 28 << 16 | 24 << 24,
+      1 | 50 << 8 | 4 << 16 | 51 << 24, 4 | 81 << 8, 3 | 12 << 8 | 8 << 16 | 13 << 24, 4 | 22 << 8 | 4 << 16 | 23 << 24, 30 | 20 << 8 | 24 << 16 | 28 << 24,
+      6 | 36 << 8 | 2 << 16 | 37 << 24, 2 | 92 << 8 | 2 << 16 | 93 << 24, 7 | 14 << 8 | 4 << 16 | 15 << 24, 4 | 20 << 8 | 6 << 16 | 21 << 24, 22 | 24 << 8 | 28 << 16 | 26 << 24,
+      8 | 37 << 8 | 1 << 16 | 38 << 24, 4 | 107 << 8, 12 | 11 << 8 | 4 << 16 | 12 << 24, 8 | 20 << 8 | 4 << 16 | 21 << 24, 22 | 26 << 8 | 22 << 16 | 24 << 24,
+      4 | 40 << 8 | 5 << 16 | 41 << 24, 3 | 115 << 8 | 1 << 16 | 116 << 24, 11 | 12 << 8 | 5 << 16 | 13 << 24, 11 | 16 << 8 | 5 << 16 | 17 << 24, 24 | 30 << 8 | 24 << 16 | 20 << 24,
+      5 | 41 << 8 | 5 << 16 | 42 << 24, 5 | 87 << 8 | 1 << 16 | 88 << 24, 11 | 12 << 8 | 7 << 16 | 13 << 24, 5 | 24 << 8 | 7 << 16 | 25 << 24, 24 | 22 << 8 | 24 << 16 | 30 << 24,
+      7 | 45 << 8 | 3 << 16 | 46 << 24, 5 | 98 << 8 | 1 << 16 | 99 << 24, 3 | 15 << 8 | 13 << 16 | 16 << 24, 15 | 19 << 8 | 2 << 16 | 20 << 24, 28 | 24 << 8 | 30 << 16 | 24 << 24,
+      10 | 46 << 8 | 1 << 16 | 47 << 24, 1 | 107 << 8 | 5 << 16 | 108 << 24, 2 | 14 << 8 | 17 << 16 | 15 << 24, 1 | 22 << 8 | 15 << 16 | 23 << 24, 28 | 28 << 8 | 28 << 16 | 28 << 24,
+      9 | 43 << 8 | 4 << 16 | 44 << 24, 5 | 120 << 8 | 1 << 16 | 121 << 24, 2 | 14 << 8 | 19 << 16 | 15 << 24, 17 | 22 << 8 | 1 << 16 | 23 << 24, 26 | 30 << 8 | 28 << 16 | 28 << 24,
+      3 | 44 << 8 | 11 << 16 | 45 << 24, 3 | 113 << 8 | 4 << 16 | 114 << 24, 9 | 13 << 8 | 16 << 16 | 14 << 24, 17 | 21 << 8 | 4 << 16 | 22 << 24, 26 | 28 << 8 | 26 << 16 | 26 << 24,
+      3 | 41 << 8 | 13 << 16 | 42 << 24, 3 | 107 << 8 | 5 << 16 | 108 << 24, 15 | 15 << 8 | 10 << 16 | 16 << 24, 15 | 24 << 8 | 5 << 16 | 25 << 24, 26 | 28 << 8 | 28 << 16 | 30 << 24,
+      17 | 42 << 8, 4 | 116 << 8 | 4 << 16 | 117 << 24, 19 | 16 << 8 | 6 << 16 | 17 << 24, 17 | 22 << 8 | 6 << 16 | 23 << 24, 26 | 28 << 8 | 30 << 16 | 28 << 24,
+      17 | 46 << 8, 2 | 111 << 8 | 7 << 16 | 112 << 24, 34 | 13 << 8, 7 | 24 << 8 | 16 << 16 | 25 << 24, 28 | 28 << 8 | 24 << 16 | 30 << 24,
+      4 | 47 << 8 | 14 << 16 | 48 << 24, 4 | 121 << 8 | 5 << 16 | 122 << 24, 16 | 15 << 8 | 14 << 16 | 16 << 24, 11 | 24 << 8 | 14 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      6 | 45 << 8 | 14 << 16 | 46 << 24, 6 | 117 << 8 | 4 << 16 | 118 << 24, 30 | 16 << 8 | 2 << 16 | 17 << 24, 11 | 24 << 8 | 16 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      8 | 47 << 8 | 13 << 16 | 48 << 24, 8 | 106 << 8 | 4 << 16 | 107 << 24, 22 | 15 << 8 | 13 << 16 | 16 << 24, 7 | 24 << 8 | 22 << 16 | 25 << 24, 28 | 26 << 8 | 30 << 16 | 30 << 24,
+      19 | 46 << 8 | 4 << 16 | 47 << 24, 10 | 114 << 8 | 2 << 16 | 115 << 24, 33 | 16 << 8 | 4 << 16 | 17 << 24, 28 | 22 << 8 | 6 << 16 | 23 << 24, 28 | 28 << 8 | 30 << 16 | 28 << 24,
+      22 | 45 << 8 | 3 << 16 | 46 << 24, 8 | 122 << 8 | 4 << 16 | 123 << 24, 12 | 15 << 8 | 28 << 16 | 16 << 24, 8 | 23 << 8 | 26 << 16 | 24 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      3 | 45 << 8 | 23 << 16 | 46 << 24, 3 | 117 << 8 | 10 << 16 | 118 << 24, 11 | 15 << 8 | 31 << 16 | 16 << 24, 4 | 24 << 8 | 31 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      21 | 45 << 8 | 7 << 16 | 46 << 24, 7 | 116 << 8 | 7 << 16 | 117 << 24, 19 | 15 << 8 | 26 << 16 | 16 << 24, 1 | 23 << 8 | 37 << 16 | 24 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      19 | 47 << 8 | 10 << 16 | 48 << 24, 5 | 115 << 8 | 10 << 16 | 116 << 24, 23 | 15 << 8 | 25 << 16 | 16 << 24, 15 | 24 << 8 | 25 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      2 | 46 << 8 | 29 << 16 | 47 << 24, 13 | 115 << 8 | 3 << 16 | 116 << 24, 23 | 15 << 8 | 28 << 16 | 16 << 24, 42 | 24 << 8 | 1 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      10 | 46 << 8 | 23 << 16 | 47 << 24, 17 | 115 << 8, 19 | 15 << 8 | 35 << 16 | 16 << 24, 10 | 24 << 8 | 35 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      14 | 46 << 8 | 21 << 16 | 47 << 24, 17 | 115 << 8 | 1 << 16 | 116 << 24, 11 | 15 << 8 | 46 << 16 | 16 << 24, 29 | 24 << 8 | 19 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      14 | 46 << 8 | 23 << 16 | 47 << 24, 13 | 115 << 8 | 6 << 16 | 116 << 24, 59 | 16 << 8 | 1 << 16 | 17 << 24, 44 | 24 << 8 | 7 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      12 | 47 << 8 | 26 << 16 | 48 << 24, 12 | 121 << 8 | 7 << 16 | 122 << 24, 22 | 15 << 8 | 41 << 16 | 16 << 24, 39 | 24 << 8 | 14 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      6 | 47 << 8 | 34 << 16 | 48 << 24, 6 | 121 << 8 | 14 << 16 | 122 << 24, 2 | 15 << 8 | 64 << 16 | 16 << 24, 46 | 24 << 8 | 10 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      29 | 46 << 8 | 14 << 16 | 47 << 24, 17 | 122 << 8 | 4 << 16 | 123 << 24, 24 | 15 << 8 | 46 << 16 | 16 << 24, 49 | 24 << 8 | 10 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      13 | 46 << 8 | 32 << 16 | 47 << 24, 4 | 122 << 8 | 18 << 16 | 123 << 24, 42 | 15 << 8 | 32 << 16 | 16 << 24, 48 | 24 << 8 | 14 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      40 | 47 << 8 | 7 << 16 | 48 << 24, 20 | 117 << 8 | 4 << 16 | 118 << 24, 10 | 15 << 8 | 67 << 16 | 16 << 24, 43 | 24 << 8 | 22 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+      18 | 47 << 8 | 31 << 16 | 48 << 24, 19 | 118 << 8 | 6 << 16 | 119 << 24, 20 | 15 << 8 | 61 << 16 | 16 << 24, 34 | 24 << 8 | 34 << 16 | 25 << 24, 28 | 30 << 8 | 30 << 16 | 30 << 24,
+  };
+  // Mike-REMOVED versionNumber, alignmentPatternCenters, ecBlocks, totalCodewords,
+  // constructor, getVersionNumber, getAlignmentPatternCenters
+  // Mike-REWORKED instance methods to be static
+  public static int totalCodewordsForVersion(int versionNumber) {
+    int offset = 5 * (versionNumber - 1);
+    int ecCodewords = VDATA[offset + 4] >>> 8 & 0xFF;
+    int ecbArray = VDATA[offset + 1];
+    return (ecbArray & 0xFF) * ((ecbArray >>> 8 & 0xFF) + ecCodewords) +
+        (ecbArray >>> 16 & 0xFF) * ((ecbArray >>> 24 & 0xFF) + ecCodewords);
+  }
+  public static int dimensionForVersion(int versionNumber) {
+    return 17 + 4 * versionNumber;
+  }
+  public static int totalECCodewordsForVersion(int versionNumber, ErrorCorrectionLevel ecLevel) {
+    return ((VDATA[5*(versionNumber-1)+4] >>> (8*ecLevel.ordinal())) & 0xFF) * numBlocksForVersion(versionNumber, ecLevel);
+  }
+  public static int numBlocksForVersion(int versionNumber, ErrorCorrectionLevel ecLevel) {
+    int ecBlocks = VDATA[5 * (versionNumber - 1) + ecLevel.ordinal()];
+    return (ecBlocks & 0xFF) + (ecBlocks >>> 16 & 0xFF);
+  }
+  // Mike-REMOVED getProvisionalVersionForDimension, getVersionForNumber, decodeVersionInformation, buildFunctionPattern
+  // Mike-REMOVED ECBlocks, ECB
+  // Mike-REMOVED toString, buildVersions
+  // END Mike-MOVED
 
 }
