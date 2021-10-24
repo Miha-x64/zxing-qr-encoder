@@ -18,6 +18,7 @@ package com.google.zxing.qrcode.encoder;
 
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitArray;
+import com.google.zxing.common.BitArrayUtils;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import org.junit.Assert;
 import org.junit.Test;
@@ -41,7 +42,7 @@ public final class MatrixUtilTestCase extends Assert {
     array.set(1, 2, -1);
     array.set(2, 2, -1);
     String expected = " 0 1 0\n" + " 1 0 1\n" + "      \n";
-    assertEquals(expected, array.toString());
+    assertEquals(expected, toString(array));
   }
 
   @Test
@@ -82,7 +83,7 @@ public final class MatrixUtilTestCase extends Assert {
         " 1 0 1 1 1 0 1 0                          \n" +
         " 1 0 0 0 0 0 1 0                          \n" +
         " 1 1 1 1 1 1 1 0                          \n";
-    assertEquals(expected, matrix.toString());
+    assertEquals(expected, toString(matrix));
   }
 
   @Test
@@ -118,7 +119,7 @@ public final class MatrixUtilTestCase extends Assert {
         " 1 0 1 1 1 0 1 0                                  \n" +
         " 1 0 0 0 0 0 1 0                                  \n" +
         " 1 1 1 1 1 1 1 0                                  \n";
-    assertEquals(expected, matrix.toString());
+    assertEquals(expected, toString(matrix));
   }
 
   @Test
@@ -149,7 +150,7 @@ public final class MatrixUtilTestCase extends Assert {
         "                 0                        \n" +
         "                 0                        \n" +
         "                 1                        \n";
-    assertEquals(expected, matrix.toString());
+    assertEquals(expected, toString(matrix));
   }
 
   @Test
@@ -182,7 +183,7 @@ public final class MatrixUtilTestCase extends Assert {
         "                                          \n" +
         "                                          \n" +
         "                                          \n";
-    assertEquals(expected, matrix.toString());
+    assertEquals(expected, toString(matrix));
   }
 
   @Test
@@ -215,7 +216,7 @@ public final class MatrixUtilTestCase extends Assert {
         " 1 0 1 1 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n" +
         " 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n" +
         " 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n";
-    assertEquals(expected, matrix.toString());
+    assertEquals(expected, toString(matrix));
   }
 
   @Test
@@ -256,7 +257,7 @@ public final class MatrixUtilTestCase extends Assert {
         " 1 0 1 1 1 0 1 0 1 1 1 1 0 0 0 0 1 1 1 0 0\n" +
         " 1 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 1 0 1 0 0\n" +
         " 1 1 1 1 1 1 1 0 0 0 1 1 1 1 1 0 1 0 0 1 0\n";
-    assertEquals(expected, matrix.toString());
+    assertEquals(expected, toString(matrix));
   }
 
   @Test
@@ -295,7 +296,7 @@ public final class MatrixUtilTestCase extends Assert {
     // From Appendix D in JISX0510:2004 (p 68)
     BitArray bits = new BitArray();
     MatrixUtil.makeVersionInfoBits(7, bits);
-    assertEquals(" ...XXXXX ..X..X.X ..", bits.toString());
+    assertEquals(" ...XXXXX ..X..X.X ..", BitArrayUtils.toString(bits));
   }
 
   // We don't test a lot of cases in this function since we've already
@@ -305,6 +306,29 @@ public final class MatrixUtilTestCase extends Assert {
     // From Appendix C in JISX0510:2004 (p 65)
     BitArray bits = new BitArray();
     MatrixUtil.makeTypeInfoBits(ErrorCorrectionLevel.M, 5, bits);
-    assertEquals(" X......X X..XXX.", bits.toString());
+    assertEquals(" X......X X..XXX.", BitArrayUtils.toString(bits));
+  }
+
+  public static String toString(ByteMatrix matrix) {
+    int width = matrix.width, height = matrix.height;
+    StringBuilder result = new StringBuilder(2 * width * height + 2);
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        result.append(' '); // Mike-CHANGED: using accessor, appending chars
+        switch (matrix.get(x, y)) {
+          case 0:
+            result.append('0');
+            break;
+          case 1:
+            result.append('1');
+            break;
+          default:
+            result.append(' ');
+            break;
+        }
+      }
+      result.append('\n');
+    }
+    return result.toString();
   }
 }

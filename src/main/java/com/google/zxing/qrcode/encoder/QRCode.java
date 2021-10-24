@@ -45,20 +45,7 @@ public final class QRCode {
     this.matrix = matrix;
   }
 
-  // Mike-REMOVED getters
-
-  @Override
-  public String toString() { // Mike-CHANGED SB to concat
-    return "<<\n" +
-        " mode: " + mode +
-        "\n ecLevel: " + ecLevel +
-        "\n version: " + version +
-        "\n maskPattern: " + maskPattern +
-        "\n matrix:\n" + matrix +
-        ">>\n";
-  }
-
-  // Mike-REMOVED setters
+  // Mike-REMOVED getters, toString, setters
 
   // Check if "mask_pattern" is valid.
   public static boolean isValidMaskPattern(int maskPattern) {

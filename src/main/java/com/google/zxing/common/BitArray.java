@@ -16,8 +16,6 @@
 
 package com.google.zxing.common;
 
-import java.util.Arrays;
-
 /**
  * <p>A simple, fast array of bits, represented compactly by an array of ints internally.</p>
  *
@@ -150,30 +148,6 @@ public final class BitArray { // Mike-CHANGED: unimplement Cloneable
     return new int[(size + 31) / 32];
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (!(o instanceof BitArray)) {
-      return false;
-    }
-    BitArray other = (BitArray) o;
-    return size == other.size && Arrays.equals(bits, other.bits);
-  }
-
-  @Override
-  public int hashCode() {
-    return 31 * size + Arrays.hashCode(bits);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder result = new StringBuilder(size + (size / 8) + 1);
-    for (int i = 0; i < size; i++) {
-      if ((i & 0x07) == 0) {
-        result.append(' ');
-      }
-      result.append(get(i) ? 'X' : '.');
-    }
-    return result.toString();
-  }
+  // Mike-REMOVED: equals, hashCode, toString
 
 }

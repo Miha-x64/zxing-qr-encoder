@@ -1,6 +1,6 @@
 package com.google.zxing.common;
 
-final class BitArrayUtils {
+public final class BitArrayUtils {
 
     // Mike-MOVED from main/BitArray
 
@@ -85,6 +85,18 @@ final class BitArrayUtils {
             }
         }
         return true;
+    }
+
+    public static String toString(BitArray ba) {
+        int size = ba.getSize();
+        StringBuilder result = new StringBuilder(size + (size / 8) + 1);
+        for (int i = 0; i < size; i++) {
+            if ((i & 0x07) == 0) {
+                result.append(' ');
+            }
+            result.append(ba.get(i) ? 'X' : '.');
+        }
+        return result.toString();
     }
 
 }

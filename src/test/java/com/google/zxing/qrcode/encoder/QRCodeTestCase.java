@@ -65,7 +65,7 @@ public final class QRCodeTestCase extends Assert {
         " 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1\n" +
         " 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0\n" +
         ">>\n";
-    assertEquals(expected, qrCode.toString());
+    assertEquals(expected, toString(qrCode));
   }
 
   @Test
@@ -74,6 +74,17 @@ public final class QRCodeTestCase extends Assert {
     assertTrue(QRCode.isValidMaskPattern(0));
     assertTrue(QRCode.isValidMaskPattern(7));
     assertFalse(QRCode.isValidMaskPattern(8));
+  }
+
+  // Mike-CHANGED: moved, replaced SB with concat
+  static String toString(QRCode code) {
+    return "<<\n" +
+        " mode: " + code.mode +
+        "\n ecLevel: " + code.ecLevel +
+        "\n version: " + code.version +
+        "\n maskPattern: " + code.maskPattern +
+        "\n matrix:\n" + MatrixUtilTestCase.toString(code.matrix) +
+        ">>\n";
   }
 
 }

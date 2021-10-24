@@ -92,9 +92,7 @@ final class GenericGFPoly {
   // Mike-REMOVED evaluateAt
 
   GenericGFPoly addOrSubtract(GenericGFPoly other) {
-    if (!field.equals(other.field)) {
-      throw new IllegalArgumentException("GenericGFPolys do not have same GenericGF field");
-    }
+    // Mike-REMOVED equals check 'cause we use a single Field
     if (isZero()) {
       return other;
     }
@@ -122,9 +120,7 @@ final class GenericGFPoly {
   }
 
   GenericGFPoly multiply(GenericGFPoly other) {
-    if (!field.equals(other.field)) {
-      throw new IllegalArgumentException("GenericGFPolys do not have same GenericGF field");
-    }
+    // Mike-REMOVED equals check 'cause we use a single Field
     if (isZero() || other.isZero()) {
       return field.zero;
     }
@@ -161,9 +157,7 @@ final class GenericGFPoly {
 
   // Mike-CHANGED: removed quotient calculation, returning only remainder
   GenericGFPoly remainder(GenericGFPoly other) {
-    if (!field.equals(other.field)) {
-      throw new IllegalArgumentException("GenericGFPolys do not have same GenericGF field");
-    }
+    // Mike-REMOVED equals check 'cause we use a single Field
     if (other.isZero()) {
       throw new IllegalArgumentException("Divide by 0");
     }

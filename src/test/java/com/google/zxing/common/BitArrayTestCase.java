@@ -184,23 +184,6 @@ public final class BitArrayTestCase extends Assert {
     assertFalse(isRange(array, 0, 64, false));
   }
 
-  // Mike-REMOVED reverseAlgorithmTest, testClone
-
-  @Test
-  public void testEquals() {
-    BitArray a = new BitArray(32);
-    BitArray b = new BitArray(32);
-    assertEquals(a, b);
-    assertEquals(a.hashCode(), b.hashCode());
-    assertNotEquals(a, new BitArray(31));
-    set(a, 16);
-    assertNotEquals(a, b);
-    assertNotEquals(a.hashCode(), b.hashCode());
-    set(b, 16);
-    assertEquals(a, b);
-    assertEquals(a.hashCode(), b.hashCode());
-  }
-
-  // Mike-REMOVED reverseOriginal, bitSet, arraysAreEqual
+  // Mike-REMOVED reverseAlgorithmTest, testClone, testEquals, reverseOriginal, bitSet, arraysAreEqual
 
 }

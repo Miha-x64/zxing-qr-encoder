@@ -466,17 +466,17 @@ final class MinimalEncoder {
       if (previous == null || mode != previous.mode || needECI) {
         size += 4 + mode.getCharacterCountBits(version);
       }
-      switch (mode) {
-        case KANJI:
+      switch (mode.ordinal()) { // Mike-CHANGED: int switch instead of enum one
+        case 0:
           size += 13;
           break;
-        case ALPHANUMERIC:
+        case 1:
           size += characterLength == 1 ? 6 : 11;
           break;
-        case NUMERIC:
+        case 2:
           size += characterLength == 1 ? 4 : characterLength == 2 ? 7 : 10;
           break;
-        case BYTE: // Mike-CHANGED outlined method
+        case 3: // Mike-CHANGED outlined method
           size += 8 * uglyFuckingByteCount(stringToEncode, encoders[charsetEncoderIndex], fromPosition, characterLength);
           if (needECI) {
             size += 4 + 8; // the ECI assignment numbers for ISO-8859-x, UTF-8 and UTF-16 are all 8 bit long
@@ -568,27 +568,17 @@ final class MinimalEncoder {
   }
 
   // Mike-INLINED getVersion()
-
-  public String toString(List<ResultNode> list) { // Mike-CHANGED parameters
-    StringBuilder result = new StringBuilder();
-    ResultNode previous = null;
-    for (ResultNode current : list) {
-      if (previous != null) {
-        result.append(",");
-      }
-      result.append(current.toString());
-      previous = current;
-    }
-    return result.toString();
-  }
+  // Mike-REMOVED toString()
 
   static final class ResultNode {  // Mike-CHANGED parameters, made static, unprivated mode
 
-    final Mode mode; // Mike-CHANGED visibility to package-private
-    private final int fromPosition;
-    private final CharsetEncoder encoder;
-    private final int characterLength;
-    private final String stringToEncode;
+    // Mike-CHANGED visibility to package-private
+    final Mode mode;
+    final int fromPosition;
+    final CharsetEncoder encoder;
+    final int characterLength;
+    final String stringToEncode;
+    // END Mike-CHANGED
 
     ResultNode(Mode mode, int fromPosition, CharsetEncoder encoder, int characterLength, String stringToEncode) {
       this.mode = mode;
@@ -603,23 +593,23 @@ final class MinimalEncoder {
      */
     int getSize(int version) { // Mike-CHANGED visibility to package-private
       int size = 4 + mode.getCharacterCountBits(version);
-      switch (mode) {
-        case KANJI:
+      switch (mode.ordinal()) { // Mike-CHANGED: replaced enum switch with int one
+        case 0:
           size += 13 * characterLength;
           break;
-        case ALPHANUMERIC:
+        case 1:
           size += (characterLength / 2) * 11;
           size += (characterLength % 2) == 1 ? 6 : 0;
           break;
-        case NUMERIC:
+        case 2:
           size += (characterLength / 3) * 10;
           int rest = characterLength % 3;
           size += rest == 1 ? 4 : rest == 2 ? 7 : 0;
           break;
-        case BYTE:
+        case 3:
           size += 8 * getCharacterCountIndicator();
           break;
-        case ECI:
+        case 4:
           size += 8; // the ECI assignment numbers for ISO-8859-x, UTF-8 and UTF-16 are all 8 bit long
       }
       return size;
@@ -649,18 +639,6 @@ final class MinimalEncoder {
         Encoder.appendBytes(stringToEncode, fromPosition, fromPosition + characterLength, mode, bits, encoder.charset());
       }
     }
-
-    public String toString() { // Mike-REWORKED: inlined makePrintable, eliminated extra StringBuilder
-      StringBuilder result = new StringBuilder(mode.name()).append('(');
-      if (mode == Mode.ECI) {
-        result.append(encoder.charset().displayName());
-      } else {
-        for (int i = fromPosition; i < fromPosition + characterLength; i++) {
-          result.append(
-              stringToEncode.charAt(i) < 32 || stringToEncode.charAt(i) > 126 ? '.' : stringToEncode.charAt(i));
-        }
-      }
-      return result.append(')').toString();
-    }
+    // Mike-REMOVED toString()
   }
 }

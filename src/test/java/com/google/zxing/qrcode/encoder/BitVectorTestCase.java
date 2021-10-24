@@ -17,6 +17,7 @@
 package com.google.zxing.qrcode.encoder;
 
 import com.google.zxing.common.BitArray;
+import com.google.zxing.common.BitArrayUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -122,7 +123,7 @@ public final class BitVectorTestCase extends Assert {
     v2.appendBits(0xef, 8);
     v1.appendBitArray(v2);
     // beef = 1011 1110 1110 1111
-    assertEquals(" X.XXXXX. XXX.XXXX", v1.toString());
+    assertEquals(" X.XXXXX. XXX.XXXX", BitArrayUtils.toString(v1));
   }
 
   @Test
@@ -174,7 +175,7 @@ public final class BitVectorTestCase extends Assert {
   public void testToString() {
     BitArray v = new BitArray();
     v.appendBits(0xdead, 16);  // 1101 1110 1010 1101
-    assertEquals(" XX.XXXX. X.X.XX.X", v.toString());
+    assertEquals(" XX.XXXX. X.X.XX.X", BitArrayUtils.toString(v));
   }
 
 }

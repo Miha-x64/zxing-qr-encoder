@@ -179,11 +179,11 @@ public final class Encoder {
       // Append the FNC1 mode header for GS1 formatted data if applicable
       if (hasGS1FormatHint) {
         // GS1 formatted codes are prefixed with a FNC1 in first position mode header
-        appendModeInfo(Mode.FNC1_FIRST_POSITION, headerBits);
+        headerBits.appendBits(Mode.FNC1_FIRST_POSITION.getBits(), 4); // Mike-CHANGED: inlined appendModeInfo
       }
 
       // (With ECI in place,) Write the mode marker
-      appendModeInfo(mode, headerBits);
+      headerBits.appendBits(mode.getBits(), 4); // Mike-CHANGED: inlined appendModeInfo
 
       // Collect data within the main segment, separately, to count its size if needed. Don't add it to
       // main payload yet.
@@ -535,13 +535,7 @@ public final class Encoder {
     return ecBytes;
   }
 
-  /**
-   * Append mode info. On success, store the result in "bits".
-   */
-  static void appendModeInfo(Mode mode, BitArray bits) {
-    bits.appendBits(mode.getBits(), 4);
-  }
-
+  // Mike-REMOVED appendModeInfo
 
   /**
    * Append length info. On success, store the result in "bits".
@@ -559,21 +553,12 @@ public final class Encoder {
    */
   static void appendBytes( // Mike-CHANGED to accept and pass range to avoid .substring()
       String content, int from, int to, Mode mode, BitArray bits, Charset encoding) throws WriterException {
-    switch (mode) {
-      case NUMERIC:
-        appendNumericBytes(content, bits, from, to);
-        break;
-      case ALPHANUMERIC:
-        appendAlphanumericBytes(content, bits, from, to);
-        break;
-      case BYTE:
-        append8BitBytes(content.substring(from, to), bits, encoding);
-        break;
-      case KANJI:
-        appendKanjiBytes(content.substring(from, to), bits);
-        break;
-      default:
-        throw new WriterException("Invalid mode: " + mode);
+    switch (mode.ordinal()) { // Mike-CHANGED: int switch instead of enum one
+      case 0: appendKanjiBytes(content.substring(from, to), bits);break;
+      case 1: appendAlphanumericBytes(content, bits, from, to); break;
+      case 2: appendNumericBytes(content, bits, from, to); break;
+      case 3: append8BitBytes(content.substring(from, to), bits, encoding); break;
+      default: throw new WriterException("Invalid mode: " + mode);
     }
   }
 
